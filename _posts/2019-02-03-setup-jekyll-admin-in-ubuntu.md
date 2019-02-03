@@ -1,6 +1,7 @@
 ---
-title: Setup Jekyll  and Jekyll Admin in Ubuntu
+title: Setup Jekyll Admin in Ubuntu
 layout: post
+description: Setup Jekyll and Jekyll admin in Ubuntu in 5 minutes.
 ---
 
 Setting up Jekyll is quite easy, but to have a full pleasant experience it is required to find a good tool to edit your page. 

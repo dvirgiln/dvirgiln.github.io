@@ -1,18 +1,47 @@
 ---
+title: David Virgil Blog
 layout: default
+paginate: true
 ---
 
-<div class="posts">
-  {% for post in site.posts %}
-    <article class="post">
+<!-- Featured -->
+<div id="featured">
+	<div class="container">
+		<header>
+			<h2>David Virgil Naranjo 	Blog</h2>
+		</header>
+		<p>This blog has been created in 2019 with the aim of helping other IT enthusiastics. The post will cover different aspects of my experience and interesting topics related big data, functional programming and Scala.</p>
+		<hr />
+		<div class="row">
+			{% for post in paginator.posts %}
+			<section class="4u">
+				<span class="pennant"><span class="fa fa-lock"></span></span>
+				<h3>{{ post.title }}</h3>
+				<p>{{ post.description }}</p>
+				<a href="{{ site.baseurl }}{{ post.url }}" class="button button-style1">Read More</a>
+			</section>
+			{% endfor %}
+		</div>
+		<div class="row">
+			<!-- Pagination links -->
+			<div class="pagination" style="width:100%;text-align: center">
+			  {% if paginator.previous_page %}
+			    <a href="{{ paginator.previous_page_path }}" class="previous">
+			      Previous
+			    </a>
+			  {% else %}
+			    <span class="previous">Previous</span>
+			  {% endif %}
+			  <span class="page_number ">
+			    Page: {{ paginator.page }} of {{ paginator.total_pages }}
+			  </span>
+			  {% if paginator.next_page %}
+			    <a href="{{ paginator.next_page_path }}" class="next">Next</a>
+			  {% else %}
+			    <span class="next ">Next</span>
+			  {% endif %}
+			</div>
 
-      <h1><a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></h1>
-
-      <div class="entry">
-        {{ post.excerpt }}
-      </div>
-
-      <a href="{{ site.baseurl }}{{ post.url }}" class="read-more">Read More</a>
-    </article>
-  {% endfor %}
+		</div>
+	</div>
 </div>

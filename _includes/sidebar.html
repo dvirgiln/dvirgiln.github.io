@@ -1,0 +1,19 @@
+
+<!-- Sidebar -->
+<div id="sidebar" class="4u">
+	<section>
+		<header>
+			<h2>Recent Blog Posts</h2>
+		</header>
+		<ul class="style">
+		{% for post in site.posts offset: 0 limit: 4 %}
+			<li>
+				<p class="posted">{{ post.date | date_to_string }}</p>
+				<p><a href="{{ site.prefix }}{{ post.url }}">{{ post.title | remove: '<p>' | remove: '</p>' }}</a></p>
+				<p>{{ post.description }}</p>
+			</li>
+		{% endfor %}
+		</ul>
+	</section>
+</div>
+

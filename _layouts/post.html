@@ -2,16 +2,23 @@
 layout: default
 ---
 
-<article class="post">
-  <h1>{{ page.title }}</h1>
+<!-- Main -->
+	<div id="main">
+		<div class="container">
+			<div class="row">
 
-  <div class="entry">
-    {{ content }}
-  </div>
-
-  <div class="date">
-    Written on {{ page.date | date: "%B %e, %Y" }}
-  </div>
-
-  {% include disqus.html %}
-</article>
+				<!-- Content -->
+				<div id="content" class="8u skel-cell-important">
+					<section>
+						<header>
+							<h2>{{ page.title }}</h2>
+							<span class="byline">{{ page.description }}</span>
+						</header>
+							{{ page.content | markdownify }}
+					</section>
+				</div>
+				{% include sidebar.html %}
+			</div>
+		</div>
+	</div>
+<!-- /Main -->

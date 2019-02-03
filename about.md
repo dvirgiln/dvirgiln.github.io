@@ -1,7 +1,7 @@
 ---
-title: About
-layout: page
-permalink: "/about/"
+title: About David Virgil
+layout: post
+permalink: "/about"
 ---
 
 I am a passionate about IT, prone to learn every day and with the bias to action. In more than 10 years of experience I have tried many different areas, from Java Servlets/JSPs to Web 2.0 apps using Jquery, integration side using Jboss and Mule ESB, passing by the purist developer side in Redhat where I was playing around with OSGI, Fuse and Switchyard, discovering the functional side with Scala, Cats, working in Big Data with Spark and Hadoop and flying around in the Amazon Cloud.
@@ -20,6 +20,7 @@ In 2018 thanks to my friend Javier Furio, I started this crazyness of triathlons
 * Woldingham Marathon (July 2017)
 
 ### Contact me
-[www.linkedin.com/in/david-virgil-naranjo](www.linkedin.com/in/david-virgil-naranjo)
 
-[david.virgil.naranjol@gmail.com](david.virgil.naranjol@gmail.com)
+Linkedin: [www.linkedin.com/in/david-virgil-naranjo](http://www.linkedin.com/in/david-virgil-naranjo)
+
+Email: [david.virgil.naranjol@gmail.com](mailto:david.virgil.naranjol@gmail.com)
