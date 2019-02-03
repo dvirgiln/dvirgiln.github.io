@@ -180,7 +180,7 @@
 /* Logo                                                                          */
 /*********************************************************************************/
 
-	/*#logo
+	#logo
 	{
 		display: none;
 	}
@@ -188,38 +188,10 @@
 	#nav
 	{
 		display: none;
-	}*/
-
-
-
-	#logo
-	{
-		position: relative;
-		z-index: 1;
 	}
-	
-		#logo h1
-		{
-			color: #FFF;
-		}
-	
-		#logo a
-		{
-			display: block;
-			text-decoration: none;
-			font-weight: 300;
-			line-height: 1em;
-			font-size: 7em;
-			color: #FFF;
-			letter-spacing: -0.05em;
-			margin: 0 0 0.125em 0;
-		}
-		
-		#logo span
-		{
-			font-size: 1.4em;
-			color: #FFF;
-		}
+
+
+
 
 /*********************************************************************************/
 /* Main                                                                          */
