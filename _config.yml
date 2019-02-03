@@ -56,11 +56,14 @@ permalink: /:title/
 
 # The release of Jekyll Now that you're using
 version: v3.8.5
-paginate: true
+# Pagination Settings
+paginate: 5
 
-pagination:
-  limit: false
-  per_page: 9
+paginate_path: "page:num"
+
+#pagination:
+#  limit: false
+#  per_page: 9
 
 # Collection Settings collections: posts: permalink: /blog/:categories/:title.html output: true
 
@@ -80,26 +83,28 @@ sass:
   style: :expanded # You might prefer to minify using :compressed
 
 # Use the following plug-ins
-gems:
+plugins:
   - jekyll-sitemap # Create a sitemap using the official Jekyll sitemap gem
   - jekyll-feed # Create an Atom feed using the official Jekyll feed gem
+  - jekyll-paginate
  # - octopress  
-  - octopress-paginate
+ # - octopress-paginate
 
-whitelist:
-  - jekyll-feed
-  - jekyll-sitemap
+#whitelist:
+#  - jekyll-feed
+#  - jekyll-sitemap
+#  - jekyll-paginate-v2
 #  - octopress
-  - octopress-paginate  
+#  - octopress-paginate  
 # Exclude these files from your production _site
 
-include:
-  - _pages
+#include:
+#  - _pages
 exclude:
   - Gemfile.lock
   - LICENSE
   - README.md
   - CNAME
-collections:
-   posts:
-     output: true
+#collections:
+#   posts:
+#     output: true

@@ -1,7 +1,8 @@
 ---
 title: David Virgil Blog
 layout: default
-paginate: true
+pagination: 
+  enabled: true
 ---
 
 <!-- Featured -->
@@ -12,6 +13,19 @@ paginate: true
 		</header>
 		<p>This blog has been created in 2019 with the aim of helping other IT enthusiastics. The post will cover different aspects of my experience and interesting topics related big data, functional programming, Spark, Kafka and Scala.</p>
 		<hr />
+		
+aaaa
+
+    {% for post in paginator.posts %}
+      <li>
+        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
+
+        <h2>
+          <a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+        </h2>
+      </li>
+    {% endfor %}
+bbb
 		<div class="row">
 			{% for post in paginator.posts %}
 			<section class="4u">
