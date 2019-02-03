@@ -971,6 +971,7 @@
 	  -moz-box-shadow: 3px 3px rgba(0,0,0,0.1);
 	  -webkit-box-shadow: 3px 3px rgba(0,0,0,0.1);
 	  margin: 20px 0 20px 0;
+	  width: 90%;
 	}
 
 	#main #content .highlight code
