@@ -83,11 +83,13 @@ sass:
 gems:
   - jekyll-sitemap # Create a sitemap using the official Jekyll sitemap gem
   - jekyll-feed # Create an Atom feed using the official Jekyll feed gem
+ # - octopress  
   - octopress-paginate
 
 whitelist:
   - jekyll-feed
   - jekyll-sitemap
+#  - octopress
   - octopress-paginate  
 # Exclude these files from your production _site
 
@@ -98,4 +100,6 @@ exclude:
   - LICENSE
   - README.md
   - CNAME
-
+collections:
+   posts:
+     output: true
