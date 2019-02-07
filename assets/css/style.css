@@ -911,7 +911,8 @@
 	{
 		display: block;
 		font-weight: 300;
-		font-size: 3em 
+		font-size: 3em;
+		line-height: initial;
 	}
 
 	#sidebar h2
