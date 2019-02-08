@@ -25,7 +25,7 @@
 	body,input,textarea,select
 	{
 		font-family: 'Roboto', sans-serif;
-		font-size: 13pt;
+		font-size: 11pt;
 		font-weight: 300;
 		line-height: 1.75em;
 		color: #777;
@@ -942,16 +942,25 @@
 		overflow: auto;
 		width: 500px; 
 	}
-
+	#main #content .highlight{
+		text-align: center;
+	}
 	#main #content .highlight pre{
-	  box-sizing: border-box;
-	  background-color: #efefef;
-	  padding: 7px 7px 7px 10px;
-	  border: 1px solid #ddd;
-	  -moz-box-shadow: 3px 3px rgba(0,0,0,0.1);
-	  -webkit-box-shadow: 3px 3px rgba(0,0,0,0.1);
-	  margin: 20px 0 20px 0;
-	  width: 90%;
+	    background: black;
+	    color: white;
+	    font-family: monospace;
+	    padding: 1rem;
+	    border-top: 1rem solid #808ea2;
+	    white-space: pre;
+	    overflow-wrap: break-word;
+	    font-size: 80%;
+	    display: block;
+	    width: 100%;
+	    overflow-y: hidden;
+	    overflow-x: auto;
+	    text-align: left;
+	    margin: 40px 0 20px 0;
+		width: 90%;
 	}
 
 	#main #content .highlight code
