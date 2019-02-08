@@ -7,7 +7,7 @@ description: Detailed architecture and implementation of a multi VPC Kafka ecosy
 featured: images/vpc_kafka/kafka_logo.png
 ---
 
-Apache Kafka is an streaming distributed platform that allows companies and organizations to have a central point where data can be streamed. It is a resilient platform that ensures zero data loss with its system of data replication over the kafka cluster. 
+Apache Kafka is an streaming distributed platform that allows companies and organizations to have a central platform where data from their different services can be streamed. It is a resilient distributed platform that ensures zero data loss with its system of data replication over the kafka cluster. 
 
 Kafka implements the architecture model Publish-Subscriber. This architecture solves the common problem in organizations about having interconnected services around all the organization, what is commonly known as Spaguetti Architecture. 
 
@@ -20,7 +20,7 @@ The main objective of this post is to show how a Kafka cluster deployed in AWS c
 
 <center><img src="/assets/images/vpc_kafka/basic_architecture_multi_environment.jpg"/></center>
 
-This means that we add flexibility. The producers can be deployed in different VPCs, different AWS accounts and the Kafka cluster can be deployed in its VPC. 
+The main reason to create this kind of architecture instead of a single vpc one, is due to flexibility. The producers can be deployed in different VPCs from  different AWS accounts and the Kafka cluster can be deployed in its VPC. 
 
 The communication between AWS accounts is achieved by the VPC endpoints. It is created a VPC endpoint Service in the pipeline side that is routing the data to an NLB connected to the Kafka brokers. The producer side communicates with the VPC Endpoint Service using a VPC Endpoint.
 
@@ -63,8 +63,6 @@ By default this property is set to false, so, the NLB just routes data to one su
 
 The NLB contains listeners and each listener has an associated target group.
 
-We will place this code into one CF template file:
-
 ```
 NLBListener:
   Type: AWS::ElasticLoadBalancingV2::Listener
@@ -102,9 +100,9 @@ There are 2 ports to have in consideration here:
 * *Target port*
   * Port that the Kafka broker instances listen.
 
- if we have a 3 nodes Kafka Cluster we would need 6 NLB TargetGroup-Listener pairs.
+ if we have a 3 nodes Kafka Cluster we would need 3 NLB TargetGroup-Listener pairs.
  
- This logic that seems simple it is not possible to be implemented in CloudFormation. CloudFormation is a templating language, but it does not allow to include this kind of logic.
+This logic that seems simple it is not possible to be implemented in CloudFormation. CloudFormation is a templating language, but it does not allow to include this kind of logic.
 To continue using CloudFormation and implement this requirement the only possible way we thought about was to include Jinga2 code.
 
 ```
@@ -133,8 +131,8 @@ To continue using CloudFormation and implement this requirement the only possibl
 ```
 
 With this code we can dynamically create the number of target groups that are required for the NLB.
-Don't go so much in detail in the previous code, but just realize that there are two embedded loops. One that iterates by the number of brokers and another that iterates by the number of VPC endpoints (in our case we have Secure and Decaf).
-This allows to create multiple TargetGroup-Listener pairs per Kafka Broker per client, as it was showed above, in the example table.
+Don't go so much in detail in the previous code, but just realize that there is a loop that iterates over the number of brokers.
+This allows to create multiple TargetGroup-Listener pairs per Kafka Broker per client, as it was showed above.
 
 ### VPC Endpoint Service
 The VPC Endpoint communication is based in two components. The *VPC Endpoint Service*, defined in the target VPC and the *VPC Endpoint*, that is defined in the client side of this communication. In our case the VPC Endpoint Service is deployed in the Kafka pipeline VPC and the VPC Endpoint is deployed in the Producers VPC. 
