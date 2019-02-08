@@ -106,6 +106,7 @@ This logic that seems simple it is not possible to be implemented in CloudFormat
 To continue using CloudFormation and implement this requirement the only possible way we thought about was to include Jinga2 code.
 
 ```
+{% raw %}
 {% for brokerId in range(env['NUMBER_OF_BROKERS'] | int) %}
    #Here would be defined the EC2 instance component..  
 
@@ -128,6 +129,7 @@ To continue using CloudFormation and implement this requirement the only possibl
         InstanceId: !GetAtt Kafka{{ brokerId }}.Outputs.EC2Instance
         VPCEndpointCount: {{ iter }}
   {% endfor %}
+  {% endraw %}
 ```
 
 With this code we can dynamically create the number of target groups that are required for the NLB.
