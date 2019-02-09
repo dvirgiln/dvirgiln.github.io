@@ -945,6 +945,24 @@
 	#main #content .highlight{
 		text-align: center;
 	}
+
+
+	pre.code {
+        white-space: pre-wrap;
+    }
+    pre.code:before {
+        counter-reset: listing;
+    }
+    pre.code code {
+        counter-increment: listing;
+    }
+    pre.code code:before {
+        content: counter(listing) ". ";
+        width: 8em;         /* doesn't work */
+        padding-left: auto; /* doesn't work */
+        margin-left: auto;  /* doesn't work */
+        text-align: right;  /* doesn't work */
+    }
 	#main #content .highlight pre{
 	    background: black;
 	    color: white;
@@ -958,7 +976,7 @@
 	    width: 100%;
 	    overflow-y: hidden;
 	    overflow-x: auto;
-	    text-align: left;
+	    text-align: left;	
 	    margin: 40px 0 20px 0;
 		width: 90%;
 	}
@@ -968,7 +986,23 @@
   		font-family:'SCP',Menlo,Consolas,Monaco,MonacoRegular,'Monaco Regular','Courier New',monospace,sans-serif;
 	}
 
-
+  .line-number {
+    display: flex;
+    flex-direction: column;
+    float: left;
+    padding-left: 0.5em;
+    margin: 0 1em 0 -1em;
+    text-align: right;
+    span {
+      display: block;
+      padding: 0 .5em 0 1em;
+      color: #ccc;
+    }
+  }
+  .cl {
+    display: block;
+    clear: both;
+  }
 
 
 
