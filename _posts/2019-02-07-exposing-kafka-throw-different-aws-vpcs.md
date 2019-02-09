@@ -1,5 +1,5 @@
 ---
-title: Exposing Kafka throw different AWS VPCs
+title: Exposing Kafka through different AWS VPCs
 layout: post
 description: Detailed architecture and implementation of a multi VPC Kafka ecosystem
   in AWS. The implementation is based on VPC endpoints and a NLB to route the traffic
@@ -11,7 +11,7 @@ Apache Kafka is an streaming distributed platform that allows companies and orga
 
 Kafka implements the architecture model Publish-Subscriber. This architecture solves the common problem in organizations about having interconnected services around all the organization, what is commonly known as Spaguetti Architecture. 
 
-Without entering in detail about what Kafka works and how the data is partitioned over all the kafka brokers. this is a simple diagram that shows what Kafka does and what it is the Publish-Subscriber model:
+Without going into too much detail about how Kafka works and how the data is partitioned over all the kafka brokers, this is a simple diagram that shows what Kafka does and what it is the Publish-Subscriber model:
 
 <center><img src="/assets/images/vpc_kafka/kafka_model.jpg"/></center>
 
@@ -22,7 +22,7 @@ The main objective of this post is to show how a Kafka cluster deployed in AWS c
 
 The main reason to create this kind of architecture instead of a single vpc one, is due to flexibility. The producers can be deployed in different VPCs from  different AWS accounts and the Kafka cluster can be deployed in its VPC. 
 
-The communication between AWS accounts is achieved by the VPC endpoints. It is created a VPC endpoint Service in the pipeline side that is routing the data to an NLB connected to the Kafka brokers. The producer side communicates with the VPC Endpoint Service using a VPC Endpoint.
+The communication between AWS accounts is achieved by the VPC endpoints. A VPC endpoint Service is created on the Kafka pipeline VPC that is routing the data to an NLB connected to the Kafka brokers. The producer side communicates with the VPC Endpoint Service using a VPC Endpoint.
 
 
 <center><img src="/assets/images/vpc_kafka/multi_vpc_detailed_arch.jpg"/></center>
@@ -59,7 +59,7 @@ NetworkLoadBalancer:
 ```
 
 It is important to setup the property *load_balancing.cross_zone.enabled* to true. It allows the NLB to route the traffic to all the AZ. Our kafka cluster CF template deploys with some logic, the different kafka brokers in a different AZ to comply with the highly availability requirements in case of a AZ failover.
-By default this property is set to false, so, the NLB just routes data to one subnet. For more information about this property you can visit [NLB cross zone balanging](https://aws.amazon.com/about-aws/whats-new/2018/02/network-load-balancer-now-supports-cross-zone-load-balancing/)
+By default this property is set to false, so, the NLB just routes data to one subnet. For more information about this property you can visit [NLB cross zone balancing](https://aws.amazon.com/about-aws/whats-new/2018/02/network-load-balancer-now-supports-cross-zone-load-balancing/)
 
 The NLB contains listeners and each listener has an associated target group.
 
@@ -133,7 +133,7 @@ To continue using CloudFormation and implement this requirement the only possibl
 ```
 
 With this code we can dynamically create the number of target groups that are required for the NLB.
-Don't go so much in detail in the previous code, but just realize that there is a loop that iterates over the number of brokers.
+You do not need to go into too much detail regarding the previous code, but just realize that there is a loop that iterates over the number of brokers.
 This allows to create multiple TargetGroup-Listener pairs per Kafka Broker per client, as it was showed above.
 
 ### VPC Endpoint Service
@@ -185,11 +185,11 @@ The *advertised listeners* are the endpoints that are advertised to connect with
 
 The *listeners properties* specify the different listeners used by the broker and the internal port that they are using. For internal interbroker communication it is used the port 9092. For the client the target port is 9093.
 
-The *inter broker listener name* specify the listener that is being used for interbroker communication. Obviously would have no sense to use the client listener.
+The *inter broker listener name* specifies the listener that is being used for interbroker communication. Obviously it would make no sense to use the client listener.
 
 The listener security protocol map specifies the security protocol used by each of the listeners. The possible values are SSL and plaintext. If this property is not specified, the default value is plaintext.
 
 ## Conclusion
-As you see to create a dynamic and scalable kafka cluster that can be used from outside of the VPC is not simple and can be a bit overengineered. But at the same time it is fun and it is doable as everything in life. 
+As you can see creating a dynamic and scalable kafka cluster that can be used from outside of the VPC is not simple and can be a bit overengineered. But at the same time it is fun and it is doable just like everything in life. 
 
 With this implementation it is already possible to send data from one account to a Kafka cluster placed in another account. In the next chapter we will see how to make this communication secure using SSL.
