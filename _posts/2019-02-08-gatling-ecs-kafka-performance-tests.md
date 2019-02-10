@@ -1,7 +1,7 @@
 ---
-title: Gatling ECS Kafka performance tests
+title: Gatling Kafka performance tests
 description: How to stress Kafka with thousands of request per second using a Gatling
-  Scala codebase that runs as a ECS task in AWS.
+  Scala codebase. By default it is not possible without creating a custom Gatling Action. Let's do it.
 layout: post
 featured: images/Gatling-dark-logo.png
 ---
@@ -9,8 +9,7 @@ featured: images/Gatling-dark-logo.png
 Gatling is a performance scala library that facilitates running performance tests on your web services/applications. By default Gatling is oriented to HTTP Rest requests. So then, how is it possible to run performance tests in Kafka using Gatling? 
 
 It is possible to create custom Actions in Gatling that specify how to stress your application. This is exactly what we are going to explore in this post. 
-
-The second problem I faced when I wanted to stress Kafka was the number of request that Gatling can handle per second. It is not possible to run Gatling in a cluster, so we could scale out the performance tests. So I decided that I could just **dockerize** the tests and run them as an ECS tasks. Using an ECS cluster, we could scale out our performance tests as we desire. 
+  
 
 ## Custom Kafka Gatling Action
 
@@ -73,11 +72,11 @@ trait AvroKafkaScenario{
 }
 ```
 About the previous code:
-* The code related how to create the Gatling Action Builder is encapsulated in a the class AvroKafkaRequestBuilder (below).
+* Line 7: The code related how to create the Gatling Action Builder is encapsulated in a the class AvroKafkaRequestBuilder (below).
 * The request builder accepts as parameters the keys and the payload. 
 * This request builder code, it is run just once by Gatling when the scenario is created. So that's why instead of passing as parameters for our builder static random values for the keys and payload, I am passing two functions. This is the power of functional programming. Your functions are values as well, as if you declare an Integer or a String.
-* The *scenario* function is a helper function that generates an skeleton of a ScenarioBuilder. 
-* The  exec function accepts an ActionBuilder. 
+* Line 9: The *scenario* function is a helper function that generates an skeleton of a ScenarioBuilder. 
+* Line 9: The *exec* function accepts an ActionBuilder. 
 
 This is the code that encapsulates the logic for the Request builder. 
 ```
@@ -122,23 +121,23 @@ class AvroRequestActionBuilder[K, V <: IndexedRecord](avroAttributes: AvroAttrib
 }
 
 ```
-The builder is quite simple. It tells Gatling how to create actions. Nothing important to notice here, except that we can import the global protocolComponentsRegistry. From this registry we are able to inject into our action the AvroProtocol. Remember here that the AvroProtocol contains the global objects that can be used by all the actions.
+The builder is quite simple. It tells Gatling how to create actions. Nothing important to notice here, except that we can import the global protocolComponentsRegistry (line 3). From this registry we are able to inject into our action the AvroProtocol. Remember here that the AvroProtocol contains the global objects that can be used by all the actions.
 
 Until now we have just created the Gatling architecture to deal with our custom avro kafka requests. Here it is the code with the logic for the custom AvroKafkaAction.
 
 ```
-class AvroRequestAction[K, V <: IndexedRecord](val avroLoggerAttributes: AvroAttributes[List[K], List[V]], val coreComponents: CoreComponents, val protocol: AvroProtocol, val next: Action)
+class AvroRequestAction[K, V <: IndexedRecord](val avroAttributes: AvroAttributes[List[K], List[V]], val coreComponents: CoreComponents, val protocol: AvroProtocol, val next: Action)
   extends ExitableAction with NameGen {
   val statsEngine = coreComponents.statsEngine
   override val name = genName("avroRequest")
   def clock: Clock = coreComponents.clock
 
   override def execute(session: Session): Unit = recover(session) {
-    avroLoggerAttributes requestName session flatMap { requestName =>
+    avroAttributes requestName session flatMap { requestName =>
       val outcome =
         sendRequest(
           requestName,
-          avroLoggerAttributes,
+          avroAttributes,
           session)
 
       outcome.onFailure(
@@ -149,9 +148,9 @@ class AvroRequestAction[K, V <: IndexedRecord](val avroLoggerAttributes: AvroAtt
     }
   }
 
-  private def sendRequest(requestName: String, avroLoggerAttributes: AvroLoggerAttributes[List[K], List[V]], session: Session) = {
+  private def sendRequest(requestName: String, avroAttributes: AvroAttributes[List[K], List[V]], session: Session) = {
     val before = System.currentTimeMillis()
-    avroLoggerAttributes.key.value.map { keyValue =>
+    avroAttributes.key.value.map { keyValue =>
       keyValue.apply()(session).map { key =>
         avroLoggerAttributes.payload.apply(key)(session) map { payload =>
           payload.map(p => protocol.avroKafkaClient.send(p))
@@ -165,5 +164,26 @@ class AvroRequestAction[K, V <: IndexedRecord](val avroLoggerAttributes: AvroAtt
   }
 ```
 
-A few considerations about the previous code.
-*
+A few considerations about the previous code:
+* Line 8: this line is exactly the same as doing *avroAttributes.requestName.apply(session)*. Magic? No, Scala.
+* All the attributes for the action reside in the avroAttributes object. Remember that the attributes we have are:
+    * RequestName
+    * Key: function that returns a list of Strings.
+    * Payload: function that from a List of Strings returns a list of Avro records.
+* Line 23: the main action logic resides here.
+* Line 25 and 26: get the list of keys from the attributes object and call the method using *apply*. In case we would have just set the key as a List of String, then we wouldn't be able to generate a different set of keys in every action. We would have been using the same set of keys in all the Gatling request actions.
+* Line 27: get the payload from the session and apply the list of keys (remember that the payload attribute is a high order function).
+* Line 28: we have the payload as a list of records. Iterates over them and send the request to Kafka. 
+* Line 29 to 31: mark the request as successful in Gatling and log the response stats. This helps Gatling to create the stats about average request time, maximum request time...
+
+
+    
+## Conclusion
+
+Create a custom Gatling action is not an easy task. It requires  understanding of how the Gatling code works. In our case we have created a custom Action that sends a list of Avro records to Kafka in every Gatling request. 
+
+We have showed how to create random request in every action using the power of Scala higher order functions. And the most important, we have had so much fun while doing it. 
+
+In the next two posts about Gatling we will discuss about:
+* How to deploy these performance test suite into a ECS cluster.
+* Verify that the request has been processed by Kafka. Usage of Akka Streams and Akka actors to asyncronously check the response has been successfully processed.  
