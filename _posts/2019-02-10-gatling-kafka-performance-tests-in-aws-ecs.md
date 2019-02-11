@@ -8,14 +8,14 @@ featured: images/Gatling-dark-logo.png
 
 Gatling is a performance scala library that facilitates running performance tests on your web services/applications. By default Gatling is oriented to HTTP Rest requests. In a previous post we talked about [how to create a custom Gatling performance tests](gatling-custom-kafka-performance-tests) library for your application.
 
-The problem I faced when I wanted to stress Kafka was the number of request that Gatling can handle per second. Gatling runs on top of a single/multi core CPU instance and even if you increase the number of requests for instance to 500 thousands per seconds, Gatling is not going to be able to process those requests. At the end every request runs in a single CPU clock time and to increase the parallelism the only way is to deploy Gatling in a machine with more CPU cores.
+The problem I faced when I wanted to stress Kafka was the number of requests that Gatling can handle per second. Gatling runs on top of a single/multi core CPU instance and even if you increase the number of requests, for instance to 500 thousands per seconds, Gatling is not going to be able to process those requests. At the end every request runs in a single CPU clock time slot, and to increase the parallelism the only way is to deploy Gatling in a machine with more CPU cores.
 
-So deploying the Gatling performance tests into a fat instance is a solution, but in my experience to stress out Kafka with more than 200 thousands MBs/second we need quite a high level of parallelism, more than what can be provided by a single instance. What to do? ECS at the rescue.
+So deploying the Gatling performance tests into a fat instance is a solution, but in my experience to stress out Kafka with more than 200 thousands MBs/second we need quite a high level of parallelism, more than what can be provided by a single instance. What could we do? **ECS** at the rescue.
 
-We could scale out the performance tests. So I decided that I could just **dockerize** the tests and run them as an ECS tasks. Using an ECS cluster, we could scale out our performance tests as we desire.
+We could scale out the performance tests. So I decided that I could just **dockerize** the tests and run them as ECS tasks. Using a ECS cluster, we could scale out our performance tests as we desire.
 
  ## Dockerizing our app
- Dockerizing a scala app is quite straightforward. They are just required 2 files, DockerFile and an entrypoint.sh.
+ Dockerizing a scala app is quite straightforward. They are just 2 files required, DockerFile and an entrypoint.sh.
  
  This is the Docker file:
  
@@ -81,8 +81,8 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 Considerations about the Dockerfile:
 * It installs java, scala and sbt.
-* In the lines 10 and 11 they are defined the ActionScenario and the Spec to be executed. This is being used in the entrypoint to specify the spec we want to run with the Docker run. Parametrizing everything help us to run dinamycally whatever we want without rebuilding the docker image, just overwritting the default environment variables.
-* It install as well the awscli. The reason is because we want to *publish the logs is S3*.
+* In the lines 10 and 11 are defined the ActionScenario and the Spec to be executed. This is being used in the entrypoint to specify the spec we want to run with the Docker run. Parametrizing everything help us to dinamycally run whatever we want without rebuilding the docker image, just overriding the default environment variables.
+* It install as well the awscli. The reason is because we want to **publish the logs is S3**.
 * In the line 57, it is the instruction to the entrypoint. The entrypoint is the action or sequence of commands that are executed when the docker image is run (*docker run*)
 
 Let's move on to the entrypoint:
@@ -107,7 +107,7 @@ Considerations about the entrypoint.sh
 * In the line 9, the sbt gatling:testOnly is executing just one specific spec. This allows to test from ECS the Gatling performance test that we desire, just changing the Docker environment variable for *ACTION_SCENARIO* or *BASE_SCENARIO*.
 * In the line 11 the gatling performance tests resuts are being uploaded to an s3 bucket.
 
-To build and run locally the performance tests:
+To build and run locally the performance tests use this:
 
 ```
 docker build -t kafka_avro_perf_test
@@ -117,7 +117,7 @@ docker run kafka_avro_perf_test
 Once we verify that everything works fine locally we are ready to go and deploy it in ECS. Let's take a look to the *CloudFormation* templates required to run our performance tests as ECS tasks.
 
  ## ECS CloudFormation templates
- To deploy a Docker image into AWS we need to first have an ECS ECR repository. 
+ To deploy a Docker image into AWS we need to first have an **ECS ECR** repository. 
  
  ```
    Repository:
@@ -136,14 +136,14 @@ Once we verify that everything works fine locally we are ready to go and deploy 
               - "ecr:*"
  ```
  
- Once the repository is created you are able to push your image to the ECR repository:
+ Once the repository is created, you would be able to push your image to the ECR repository:
  
  ```
  docker build -t kafka_avro_perf_test
  docker push aws_account_id.dkr.ecr.region.amazonaws.com/kafka_avro_perf_test
  ```
  
- The next step is to create the Iam Roles required to run the ECS task and to access the S3 bucket where we are saving the output from the performance tests.:
+ The next step is to create the Iam Roles required to run the ECS task. And IAM role is composed by IAM policies. In our case we need to create a policy to access the S3 bucket where the performance tests results are saved.:
  
  ```
    ECSRole:
@@ -188,7 +188,7 @@ Once we verify that everything works fine locally we are ready to go and deploy 
 * Line 17: it is created a S3 bucket policy to let the ECS task to write into the stats bucket that we suppose that is already created in S3.
  
  
- Once we have defined the required IAM roles and our Docker image is deployed into ECR we just need to deploy with CF the ECS task. This is the code.
+ Once it is defined the required IAM role and the Docker image is deployed into ECR, we just need to deploy with CF the ECS task. This is the code.
  ```
    CloudWatchLogGroup:
     Type: AWS::Logs::LogGroup
@@ -217,7 +217,7 @@ Once we verify that everything works fine locally we are ready to go and deploy 
       Family: !Sub ${Function}
  ```
  
-The previous code about the ECS task has some details to go into:
+The previous code has some details to go into:
 * In the line 10 it is injected the previously defined ECS IAM role.
 * In the line 16 it is injected the docker image already pushed to ECR. It should have the same name as it was pushed into ECR.
 * In the line 11 it is specified the task compatibility to be EC2. There are 2 kind of deployments in ECS. You can either deploy to a Fargate or EC2 cluster. In case you decide to deploy the ECS task into a Fargate cluster you need to include a parameter *NetworkMode* with the value *awsvpc*. For more information you can visit [AWS ECS Task CF](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html#cfn-ecs-taskdefinition-networkmode) .
@@ -242,11 +242,11 @@ In the previous code we can see 2 parts:
     * Number of task to run
     * Json object that contains the environment variables to override from the docker image.
 
-This last code has been run from Atlassian Bamboo. That's why you can see all the values containing the $ symbol. This is because all the variables has been defined as Bamboo variables, to provide more automation.
+This last code has been run from Atlassian Bamboo. That's why you can see all the values containing the $ symbol. The reason is because they has been defined as Bamboo variables, to provide more automation and less effort while running the performance tests.
 
 ## Conclusions
-Dockerizing an application and deploying into ECS could seems a bit tedious and complicated. Once you dockerized once, you always tend to dockerize everything. The reason is because everything that is running in docker you are 100% sure it is going to work no matter which environment it is working on. Docker creates their own environment and download and install all the required dependencies. 
+Dockerizing and deploying an application into ECS could seem to be a bit tedious and complicated. But once you dockerized once, you always tend to dockerize everything. The reason is because everything that is running in a Docker container, you are 100% sure it is going to work no matter which environment it is working on. Docker creates their own environment and download and install all the required dependencies. 
 
-In our case dockerizing the gatling performance tests was not very difficult. It was just tedious as it required:  creating a Docker file, then creating the ECR repository, then the IAM roles, then the ECS task CF code. And then it required to run the ECS task, either manually or from an Continuous Integration plan.
+In our case, dockerizing the gatling performance tests was not very difficult. It was just tedious as it required: creating a Docker file, then creating the ECR repository, then the IAM roles, then the ECS task CF code. And then it required to run the ECS task, either manually or from an Continuous Integration plan.
 
-In the next Gatling performance post we will explore how to create asyncronous and responsive Gatling tests using Akka Actors and Akka Streaming.
+In the next Gatling performance post, we will explore how to create asyncronous and responsive Gatling test using Akka Actors and Akka Streaming.
