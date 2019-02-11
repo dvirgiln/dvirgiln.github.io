@@ -247,8 +247,7 @@ In the previous code we can distinguish 2 parts:
     * Json object that contains the environment variables to override from the docker image.
 
 This last code has been run from Atlassian Bamboo. That's why you can see all the values containing the *$* symbol.
-
-## Conclusions
+## Conclusion
 Dockerizing and deploying an application into ECS could seem to be a bit tedious and complicated. But once you dockerized once, you always tend to dockerize everything. The reason is because everything that is running in a Docker container, you are 100% sure it is going to work no matter which environment it is working on. Docker creates their own environment and download and install all the required dependencies. 
 
 In our case, dockerizing the gatling performance tests was not very difficult. It was just tedious as it required: creating a Docker file, then creating the ECR repository, then the IAM roles, then the ECS task CF code. And then it required to run the ECS task, either manually or from an Continuous Integration plan.
