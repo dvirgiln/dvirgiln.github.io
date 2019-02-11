@@ -1,7 +1,8 @@
 ---
 title: Gatling Kafka performance tests
 description: How to stress Kafka with thousands of request per second using a Gatling
-  Scala codebase. By default it is not possible without creating a custom Gatling Action. Let's do it.
+  Scala codebase. By default it is not possible without creating a custom Gatling
+  Action. Let's do it.
 layout: post
 featured: images/Gatling-dark-logo.png
 ---
@@ -62,22 +63,24 @@ Easy. Let's move on to the ScenarioBuilder.
 ```
 import io.gatling.core.Predef.{scenario, _}
 trait AvroKafkaScenario{
-	private def generateUUIDs = (1 to numberOfRecorsPerTransaction).map(_ => UUID.randomUUID.toString).toList
-	private def generateRecords = (ids: List[String]) => ids.map(id => generateRecord(id))
-	val keyFunc = () => generateUUIDs
-	val payloadFunc = (ids) => generateRecords(ids)
-	val requestBuilder= AvroKafkaRequestBuilder("request")
-	val avroKafkaActionBuilder= requestBuilder.send[String, GenericData.Record](keyFunc, payloadFunc)
-	def scenarioBuilder = scenario(s"Avro Kafka Test").exec(avroKafkaActionBuilder)
+	def scenarioBuilder = {
+		val generateUUIDs = (1 to numberOfRecorsPerTransaction).map(_ => UUID.randomUUID.toString).toList
+		val generateRecords = (ids: List[String]) => ids.map(id => generateRecord(id))
+		val keyFunc = () => generateUUIDs
+		val payloadFunc = (ids) => generateRecords(ids)
+		val requestBuilder= AvroKafkaRequestBuilder("request")
+		val avroKafkaActionBuilder= requestBuilder.send[String, GenericData.Record](keyFunc, payloadFunc)
+		scenario(s"Avro Kafka Test").exec(avroKafkaActionBuilder)
+	}
 }
 ```
 About the previous code:
-* Line 7: The code that contains how to create a Gatling Action Builder is encapsulated in a the class AvroKafkaRequestBuilder (below).
+* Line 8: The code that contains how to create a Gatling Action Builder is encapsulated in a the class AvroKafkaRequestBuilder (below).
 * The request builder accepts as parameters the keys and the payload. 
 * This request builder code is run just once by Gatling when the scenario is created. So that's the reason why instead of passing as parameters for our builder static random values for the keys and payload, I am passing two functions. If we would have include instead of higher order functions, materialized values, that would means that all the Gatling requests would be identical. 
 * This is the power of functional programming. Your functions are values as well, as if you declare an Integer or a String.
-* Line 9: The *scenario* function is a helper function that generates an skeleton of a ScenarioBuilder. 
-* Line 9: The *exec* function accepts an ActionBuilder. 
+* Line 10: The *scenario* function is a helper function that generates an skeleton of a ScenarioBuilder. 
+* Line 10: The *exec* function accepts an ActionBuilder. 
 
 This is the code that encapsulates the logic for the Request builder:
 ```
@@ -187,4 +190,4 @@ We have showed how to create random request in every action using the power of S
 
 In the next two posts about Gatling we will discuss about:
 * How to deploy this performance test suite into a ECS cluster.
-* Verify that the request has been processed by Kafka. Usage of Akka Streams and Akka actors to asyncronously check the response has been successfully processed.  
+* Verify that the request has been processed by Kafka. Usage of Akka Streams and Akka actors to asyncronously check the response has been successfully processed.
