@@ -27,7 +27,7 @@ But in the real world forms are quite complex, and normally the structures conta
 ```
 In the previous code it has been modeled a hotel property listing.  Obviously we could have model a form validator based on one big validator that validates all the different values of the nested elements. But the solution is not quite clean and its quite coupled. For instance the address case class could be used in other parts of our code as part of other class.
 
-The main objective of this article is to show a good example that solves the problem of a composition of validators using Cats Applicative functor combined with the Validated monad.
+The main objective of this article is to show a good example that solves the problem of a composition of validators using Cats Applicative functor combined with the Validated functor.
 
 Let's review what it is exactly the syntax of the Applicative functor:
 
@@ -148,7 +148,7 @@ to
 	String => String => String =>String => Option[String] => String => Address
 ```
 Magic? No, Scala.
-* Continuation of line :  so, we have a nested function and we applied the pure function from *Applicative*, so we have a:
+* Continuation of line 59:  so, we have a nested function and we applied the pure function from *Applicative*, so we have a:
 ```
 F[String => String => String =>String => Option[String] => String => Address]
 ```
@@ -179,12 +179,12 @@ Validated is not a monad. If you try to execute the flatMap operation, you can s
 
 Validated has 2 type parameters E and A. The E type correspond to the kind of error that is returned in case of error. The A type parameter correspond to the return type in case of a valid response. Similar to the Either type parameters.
 
-To help developers Cats provides an extension type of the main Validated type, that we are going to use in our example:
+To help us, Cats provides an extension type of the main Validated type, that we are going to use in our example:
 
 ```
   type ValidatedNel[+E, +A] = Validated[NonEmptyList[E], A]
 ```
-The ValidatedNel model the error accumulation case, that it is exactly what we need.
+The ValidatedNel models the error accumulation use case, that it is exactly what we need.
 
 We can see part of the implementation of the Listing Validator. 
 
