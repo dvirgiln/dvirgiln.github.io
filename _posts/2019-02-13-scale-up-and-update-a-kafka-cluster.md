@@ -7,7 +7,7 @@ description: Detailed steps about how to update and scale up a production Kafka 
   instances.
 ---
 
-One of the most common problems when having a Kafka production cluster is how to make updates in the cluster without stopping the cluster, so we ensure zero data loss. 
+One of the most common problems in a Kafka production cluster is how to make updates in the cluster without stopping the cluster, so we ensure zero data loss. 
 
 Kafka by default ensures zero data loss when the replication factor per topic is greater than 1. 
 
