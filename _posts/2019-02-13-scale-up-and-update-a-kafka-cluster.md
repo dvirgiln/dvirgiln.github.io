@@ -13,7 +13,7 @@ Kafka by default ensures zero data loss when the replication factor per topic is
 
 In our case the Kafka cluster has been deployed in AWS using CloudFormation and CodeDeploy. CloudFormation is in charge of creating all the infrastructure while CodeDeploy installs Kafka in our instances. The references to CloudFormation and CodeDeploy are minor during the reading of this post. You can apply the same or similar solutions to your cluster deployed in Azure or to your cluster deployed in your on premises machines.
 
-Why does Kafka needs to be updated? The changes could be introduced as software or software basis. 
+Why does Kafka needs to be updated? The changes could be introduced as software or hardware basis. 
 * Software upgrades
     * Upgrading the Kafka version
     * Modifying some Kafka properties
@@ -26,16 +26,16 @@ Why does Kafka needs to be updated? The changes could be introduced as software 
 ## Software upgrade
 A software upgrade normally would just involve doing a *codedeploy:deploy.* Code deploy should be executed with the *DeploymentConfigName* equals to *OneAtTime* and the replication factor of all the topics greater than one.
 
-During some minutes one of our Kafka brokers is down to install the software upgrades. What does it happen to the Kafka cluster ? If the offline broker was a leader for some partitions, it is elected a new leader for those partitions. If in other case is not a leader it needs to be in sync with the leader when the broker is up. 
+During some minutes one of our Kafka brokers is down to install the software upgrades. What does it happen to the Kafka cluster? If the offline broker was a leader for some partitions, it is elected a new leader for those partitions. If in other case is not a leader it needs to be in sync with the leader when the broker is up again. 
 
-In case our Kafka broker is going to be down for a long time, then we may need to do a reassign of the partitions to move them to the online brokers. Normally with software upgrades reassigning partitions is not required.
+In case that our Kafka broker is going to be down for a long time, then we may need to do a reassign of the partitions to move them to the online brokers. Normally with software upgrades, reassigning partitions is not required.
 
-After the software upgrade is done, and another kafka broker is offline during the software upgrade, it is recommended to add some delay, like ten minutes. The reason has been explained before: wait until the broker gets in sync of all of its replica partitions. 
+After the software upgrade is done, the broker passes from offline to online. It is recommended at this time, to add some delay, like ten minutes. The reason has been explained before: wait until the broker gets in sync with all of its replica partitions. 
 
-So, doing sofware upgrades is relatively easy. The cluster is stress out during the period that the brokers are offline, but it is feasible. If the software upgrade involves a kafka version upgrade, I am not sure this procedure would work, as it would involve having some brokers with one version of Kafka and anothers with the upgraded versions. That would need to be tested.
+So, doing sofware upgrades is relatively easy. The cluster is stress out during the period that the brokers are offline-online due to the broker synchronization, but it is feasible. If the software upgrade involves a kafka version upgrade, I am not sure this procedure would work, as it would involve having some brokers with one version of Kafka and anothers with the upgraded versions. That would need to be tested.
 
 ## Hardware upgrade
-Doing a hardware upgrade involves tearing down a broker machine and create a new one. If one node is down, the data in Kafka is not lost, because it exists a replication factor. But what if we replace the hardware of one broker in the cluster by a new machine. It could end up in an inconsistency state, as the broker would try to get in sync with the replicas he is in charge, but the broker has no data, it is empty.
+Doing a hardware upgrade involves tearing down a broker machine and create a new one. If one node is down, the data in Kafka is not lost, because it exists a replication factor. 
 
 The safest way to upgrade the hardware of your kafka cluster is to make the upgrade in chunks of nodes. Lets assume that we have a kafka cluster with n brokers and we are going to use chunks of m brokers to do the upgrade.
 1. Reassign the topic partitions to the non-upgraded nodes. Reassign partitions to brokers from  m to n
