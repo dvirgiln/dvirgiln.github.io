@@ -78,10 +78,35 @@ To get all the topics of your cluster,  you just need to execute this instructio
 .bin/kafka-topics.sh --zookeeper $zookeeper --list
 ```
 
+In a production environment where it can contain thousand of topics, I do not feel quite comfortable including the reassignment of all the topics in one instruction. I prefer to make one thousand of single reassignments. The following code automate this process:
+
+```
+#!/bin/bash
+topicsFilename=$1
+brokers=$2
+zookeeper=$3
+topicsString=$(cat $topicsFilename |tr "\n" " ")
+topicsArray=($topicsString)
+echo "${topicsArray[*]}"
+for topic in "${topicsArray[@]}"
+do
+   echo "Rebalancing $topic"
+   echo "{\"topics\":[{\"topic\": \"$topic\"}],\"version\":1}" > /tmp/${topic}_reassign.json 
+   /bin/bash /srv/kafka/bin/kafka-reassign-partitions.sh --zookeeper $zookeeper --topics-to-move-json-file /tmp/${topic}_reassign.json --generate --broker-list $brokers | grep -A1 "Proposed partition reassignment configuration" | grep -v "Proposed partition reassignment configuration" > /tmp/${topic}_reassign_partitions.json 
+   echo "Applying reassigment of partitions for $topic"
+   cat /tmp/${topic}_reassign_partitions.json 
+
+    /bin/bash /srv/kafka/bin/kafka-reassign-partitions.sh --zookeeper $zookeeper --reassignment-json-file /tmp/${topic}_reassign_partitions.json --execute
+done
+```
+Considerations about the previous code:
+* This script has 3 parameters: the filename that contains the list of topics, the reassignment brokers and the zookeeper url.
+* Line 8: iterating through the topics. Per topic we are going to call the two commands previously explained.
+* Line 12: the output of the *kafka-reassign-partitions* is not quite clean. We need to take the last lines before the line *"Proposed partition reassignment configuration"*. With the hep of grep we can do it. Magic!
+
 You can check that your topic partitions have been reassigned
 ```
 .bin/kafka-topics.sh --zookeeper $zookeeper --list
 ```
-
 ## Conclusion
 This post contains a real Kafka production problem and it explained how to solve it in a safe way that ensures zero data loss.
