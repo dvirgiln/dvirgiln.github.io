@@ -1053,6 +1053,29 @@
 		margin-top: 1.5em;
 	}
 
+	.row_table {
+	  display: flex;
+	  flex-direction: row;
+	  flex-wrap: wrap;
+	  width: 100%;
+	}
+
+	.column_table {
+	  display: flex;
+	  flex-direction: column;
+	  flex-basis: 100%;
+	  flex: 1;
+	  height: 100%;
+	}
+	.column_full{
+		height: 100%;
+	}
+	.bottom_button{
+		text-align: bottom;
+	}
+	.row {
+		margin-top: 50px;
+	}
 /*********************************************************************************/
 /* Tweet                                                                         */
 /*********************************************************************************/

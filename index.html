@@ -15,15 +15,30 @@ pagination:
 		<p>With more than 10 years of experience, I found my passion in Scala and functional programming. After having worked so many years in Java, working in Scala have not filled up yet my apetite of learning. Right now my passions are Functional programming, Cats and everything related with Big data: spark, akka, kafka, elastic search, airflow and the massive world of AWS.</p>
 		</p>
 		<hr />
-		<div class="row">
+		<div class="row_table">
+			{% assign counter = 0 | plus: 0%}
+			{% assign row_created = false %}
 			{% for post in paginator.posts %}
-			<section class="4u">
-				<span class="pennant"><span class="fa fa-lock"></span></span>
-				<h3>{{ post.title }}</h3>
-				<p>{{ post.description }}</p>
-				<a href="{{ site.baseurl }}{{ post.url }}" class="button button-style1">Read More</a>
-			</section>
+				{% assign mod_val = counter | modulo: 3  %}
+				{% if row_created == true and mod_val == 0 %}
+					{% assign row_created = false %}		
+					</div>	
+				{% endif %}				
+				{% if row_created == false and mod_val == 0 %}
+					{% assign row_created = true %}		
+					<div class="row">	
+				{% endif %}	
+				<div class="column_table 4u">
+					<span class="pennant"><span class="fa fa-lock"></span></span>
+					<h3>{{ post.title }}</h3>
+					<div class ="column_full"><p>{{ post.description }}</p></div>
+					<div class="bottom_button"><a href="{{ site.baseurl }}{{ post.url }}" class="button button-style1">Read More</a></div>
+				</div>
+				{% assign counter = counter | plus: 1 %}
 			{% endfor %}
+			{% if row_created == true %}
+				</div>	
+			{% endif %}	
 		</div>
 		<div class="row">
 			<!-- Pagination links -->
