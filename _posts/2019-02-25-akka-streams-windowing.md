@@ -214,11 +214,8 @@ https://github.com/dvirgiln/streams-kafka
 Go into the folder Akka Consumer. The code explained here it is just a small subpart of this repository. In the next article we will go through the powerful GraphDSL functionality provided by Akka Streams.
 
 ## Conclusion
-This article could be a good starting point to initiate into Akka Streams. We have covered quickly all the required theorical terms to understand what and how to implement windowing using in our case Akka Streams.
+This article could be a good starting point to initiate into Akka Streams. We have covered quickly all the required theorical terms to understand what it is and how to implement windowing using in our case Akka Streams.
 
 And the most important thing, the code explained in this article works! You just need to clone my repo and run it with docker. If you see something in my repository that you do not understand and has not been covered in this post, do not worry. We will go through it in future posts.
 
 I hope you had so much fun, as I had while writing it.
-2019-02-26-akka-streams-windowing.md
-Abrir con
-Mostrando 2019-02-26-akka-streams-windowing.md.
