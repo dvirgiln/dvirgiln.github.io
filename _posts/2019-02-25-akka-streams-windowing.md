@@ -6,35 +6,35 @@ description: Good introduction to Akka Streams explaining what it is windowing a
   how to implement it using Scala and Akka Streams.
 ---
 
-Akka Streams is a powerful streaming library that allows developers to manipulate the data in multiple and genuine ways, but it is not providing aggregations of the data like you can find in other Streaming libraries like Spark or Kafka Streams.
+Akka Streams is a powerful streaming library that allows developers to manipulate streaming data in multiple and genuine ways. In the other hand, it is not providing aggregations of the data like you can find in other Streaming libraries like Spark or Kafka Streams.
 
-Aggregating data is one of the most common problems that streaming applications require. Akka streams is a low level library that allows developers to do great stuff and manipulate the incoming data in such amazing ways. The main difference between Akka Streams and Apache Spark is that Spark is a higher level library that includes more boundaries and limitates what the developer can do.
+Aggregating data is one of the most common problems that streaming applications require. Akka streams is a low level library that allows developers to do great stuff and manipulate the incoming data in such amazing ways. The main difference between Akka Streams and **Apache Spark** is that Spark is a higher level library that includes more boundaries and limitates what the developer can do.
 
 I would like to explain more about the differences between Akka Streams and Spark Streaming, but that is not part of this article. What we need to know is that Spark Streaming, as a higher level library provides Windowing functionality while Akka Streams doesn't.
 
-But, what is it exactly Windowing?
+But, what is it exactly streaming windowing?
 
 ## Windowing: the concept
-The data that is consumed from the stream needs to be aggregated by a different window of time. We could have aggregations of the data by windows of 5 minutes, or windows of 30 minutes. For example we could have windows of 30 minutes, so, it starts from 00:00 -00:30, 00:30 - 01:00, 01:00 - 01:30 ,,,
-Some examples about the aggregation of the data could be:
+The data that is consumed from the stream needs to be aggregated by different windows of time. We could have aggregations of the data by windows of 5 minutes, or windows of 30 minutes. For example we could have windows of 30 minutes, so, it starts from 00:00 -00:30, 00:30 - 01:00, 01:00 - 01:30 ,,,
+Some examples about data aggregation could be:
 * Bookings: aggregate the gross cost of all the online shop bookings in windows of 5 minutes. This data could be ingested to a machine learning pipeline looking for anomalies.
-* Music platform: aggregate the songs listened per region and per artist in windows of 5 minutes. This information can be used to make suggestion to other users.
+* Music platform: aggregate  songs listened per region and per artist in windows of 5 minutes. This information can be used to make suggestion to other users.
 
-But in this case the first question is, *"Ok but, how I get the event time of a record consumed from the stream?"* . There are two ways:
+But in this case, the first question is, *"Ok but, how I get the event time of a record consumed from the stream?"* . There are two ways:
 * **Event time** included in the message: the records consumed contain an attribute that specifies when the record happened. For instance in the booking example it could be the transaction_timestamp.
 * **Processing time**: the event time is got from the system timestamp of the akka streams application.
 
 The processing time based windows is not exactly what we want, as the incoming records are comming unordered. It could happen that we are processing a record that happened 5 minutes ago, so using the processing time as mechanism to assing a record to a window is not ideal.
 
-We want to assign our records to different windows of time based on a record attribute that will tell us to which window it belongs to.
+We want to assign our records to different windows of time based on a record attribute that will tell us to which window they belong to.
 
 Then, we need to decide if we want to have **sliding windows** or **tumbling windows**:
-* *Sliding Windows*: the windows overlap one with each other depending of the step time.  One record can be part of different windows at the same time. For instance we can have a window with lenght 30 minutes and steps of 10 minutes, these would means for a time based starting from 00:00: W1(00:00 -00:30), W2(00:10 - 00:40), W3 (00:20 - 00:50) ...
+* *Sliding Windows*: the windows overlap one to each other depending of the **step time**.  One record can be part of different windows at the same time. For instance we can have a window with lenght 30 minutes and steps of 10 minutes, these would means for a time based starting from 00:00 our windows would be: W1(00:00 -00:30), W2(00:10 - 00:40), W3 (00:20 - 00:50) ...
 * *Tumbling Windows*: there is no overlap. Every record belongs just to one window. For instance for a window with lenght of 30 minutes, the windows associated started from 00:00 would be: W1(00:00 - 00:30), W2(00:30,01:00), W3(01:00 - 01:30) ...
 
 There is another concept we need to speak about when it comes to streams windows before we start the real implementation: **watermark**.
 
-As we commented briefly before, the records they do not come ordered. Watermarking is a techique that deals with lateness. It is the threshold that tell the system how long it has to wait waiting for late records.
+As we commented briefly before, the records do not come ordered. Watermarking is a techique that deals with lateness. It is the threshold that tells the system how long it has to wait waiting for late records.
 
 So, we need to implement a mechanism based on windows that aggregates the incoming records into the window/s it belongs to. There are 3 parameters that defines the windows.
 * Window lenght
@@ -52,7 +52,11 @@ In our case the SalesRecord case class looks like this:
 
 As you can notice the record itself contains contains the event time. Good!
 
-Our Akka Streams App is consuming records from Kafka. This is how we define the Kafka Consumer:
+We want to implement a window solution with the following features:
+* Tumbling windows: this means that the window step and window lenght is the same value. There will be no overlap between windows. Every record would be part of the only one window.
+* Watermark: 5 seconds.
+
+In our example our Akka Streams App is consuming records from Kafka. This is how we define the Kafka Consumer:
 
 ```
   val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new ByteArrayDeserializer)
@@ -83,7 +87,7 @@ case class Window(from: Long, to: Long, duration: Option[Long] = None) {
 }
 ```
 
-Then we want to convert our Streaming of SalesRecords into a streaming of window commands:
+Then we want to convert our Streaming of SalesRecords into a streaming of **window commands**. This means that for every record in time we need to generate a set of commands that would open new windows, close existing windows and add a record to a window. You will see in a few minutes how to generate this commands, and all the logic behind. For the moment this is how the window commands look like:
 
 ```
 sealed trait WindowCommand {
@@ -95,7 +99,9 @@ case class CloseWindow(w: Window) extends WindowCommand
 case class AddToWindow(ev: SalesRecord, w: Window) extends WindowCommand
 ```
 
-In the previous code we model the three different commands that define the different actions to do in the stream:
+In the previous code we model the three different commands that define the different actions to do in the stream. 
+
+The following code it is the starting point of the streaming processing:
 ```
   //Generates window commands
   val subFlow = source.statefulMapConcat { () =>
@@ -112,7 +118,7 @@ Considerations about the previous code:
 * Line 3: It is created an instance of the WindowCommandGenerator. This is key part and we will explain it afterwards. It receives a sequence of frequencies and then generate window commands for all the frequencies. For instance, we maybe for the same stream would like to aggregate the data in two different windows, for instance 5 and 30 minutes windows.
 * Line 4: For every record that we receive then...
 * Line 6: the generator will generate for that timestamp a collection of window commands: Open, Close and Add to Window commands.
-* Line 7: the **groupBy** operation creates up to 64 substreams having as a key the window. So all the WindowCommands that belongs to the same window will be part of the same substream. GroupBy returns a special Stage type. It is not a Flow or Source, it is a **SubFlow**.
+* Line 7: the **groupBy** operation creates up to 64 **substreams** having as a key the window. So all the WindowCommands that belongs to the same window will be part of the same substream. GroupBy returns a special Stage type. It is not a Flow or Source, it is a **SubFlow**.
 
 The following code is a subpart of the WindoCommand Generator. It is the function that returns a set of windows for a timestamp:
 
@@ -178,8 +184,8 @@ class WindowCommandGenerator(frequencies: Seq[FiniteDuration]) {
 ```
 
 * Line 35:  the function returns a list of commands as the result of the concatenation of the open, close and add commands. We need to see how these 3 list of commands are generated:
-    * **Close Window Command**: in the line 13, it the existing openwindows (line x) are older than the watermark, then remove the openWindow and generate a new CloseWindow command.
-    * **Open Window Command**: in the line 23, if a window for one frequency was already closed, then it is required to create an OpenWindow command. In the line 28, we can see the call to **Window.windowsFor** to generate the new windows and the new windows then are added to the openWindows list(line 30).
+    * **Close Window Command**: in the line 13, if the existing openwindows (line 4) are older than the watermark, then remove the openWindow and generate a new CloseWindow command.
+    * **Open Window Command**: in the line 23, if a window for one frequency was already closed, then it is required to create an OpenWindow command. In the line 28, we can see the call to **Window.windowsFor** to generate the new windows. Then the new windows then are added to the openWindows list(line 30).
     * **Add to Window command**: from all the open windows, then we need to add the current event to the window (line 34).
 
 Once it has been explained how to generate the windows and how to create a flow of window commands, then we can come back to the original **subflow**:
@@ -209,12 +215,12 @@ This aggregator uses the fold operation. So, it aggregates all the SalesRecords 
 ## Source Code
 All the source code is available in my github account:
 
-https://github.com/dvirgiln/streams-kafka
+[https://github.com/dvirgiln/streams-kafka](https://github.com/dvirgiln/streams-kafka)
 
-Go into the folder Akka Consumer. The code explained here it is just a small subpart of this repository. In the next article we will go through the powerful GraphDSL functionality provided by Akka Streams.
+Go into the Akka Consumer directory. The code explained here it is just a small subpart of this repository. In the next article we will go through the powerful **GraphDSL** functionality provided by Akka Streams.
 
 ## Conclusion
-This article could be a good starting point to initiate into Akka Streams. We have covered quickly all the required theorical terms to understand what it is and how to implement windowing using in our case Akka Streams.
+This article could be a good starting point to initiate into Akka Streams. We have covered quickly all the required theorical terms to understand what it is and how to implement windowing using Akka Streams.
 
 And the most important thing, the code explained in this article works! You just need to clone my repo and run it with docker. If you see something in my repository that you do not understand and has not been covered in this post, do not worry. We will go through it in future posts.
 

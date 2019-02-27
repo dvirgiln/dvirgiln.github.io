@@ -1,5 +1,5 @@
 ---
-title: Nested form validation using Scala Cats
+title: 'Applicative and Validated Scala Cats: nested form validation'
 description: Usage of Applicative and Validated Cats type classes to perform a multi
   level form validation. So much fun guaranteed...
 layout: post
