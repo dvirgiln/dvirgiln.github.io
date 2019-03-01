@@ -44,6 +44,9 @@ So, we need to implement a mechanism based on windows that aggregates the incomi
 ## Implementation
 In the following example we will go throw a shops booking stream. The stream will receive booking records from different shops, specifying the total amount of items and the cost.
 
+The following diagram explains what we want to implement:
+<center><img src="/assets/images/akka/akka_streams_1.png"/></center>
+
 In our case the SalesRecord case class looks like this:
 
 ```
