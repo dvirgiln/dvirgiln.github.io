@@ -2,15 +2,16 @@
 title: Akka Streams GraphDSL and Windowing
 featured: images/akka.png
 layout: post
-description: 'During the lecture the reader will discover the power of Akka Streams:
-  how to manipulate streams using the Akka Streams GraphDSL.'
+description: 'During the lecture, the reader will discover the power of Akka Streams:
+  how to manipulate streams combining the Akka Streams GraphDSL, windowing and different
+  split aggregations.'
 ---
 
-In a previous [post](https://dvirgiln.github.io/akka-streams-windowing/) we discussed about what it is **windowing** and how to implement it using Akka Streams. The main reason why we have to do this, and it is not provided by Akka Streams, it is because it is a lower level library and let the developers manipulate the streams as they want. No boundaries, No limits.
+In a previous [post](https://dvirgiln.github.io/akka-streams-windowing/) we discussed about what it is **windowing** and how to implement it using Akka Streams. The main reason why we have to do this, and it is not provided by Akka Streams, it is because it's a lower level library and let the developers manipulate the streams as they want. No boundaries, no limits.
 
 As a continuation of the previous post, using the same [codebase](https://github.com/dvirgiln/streams-kafka), we are going to explain the powerful GraphDSL provided by Akka Streams.
 
-We are receiving Sales Record from a Kafka topic with the following format:
+The input stream is based on sales records from a Kafka topic with the following format:
 
 ```
   case class SalesRecord(transactionTimestamp: Long, shopId: Int, productId: Int, amount: Int, totalCost: Double)
@@ -20,10 +21,10 @@ The Kafka producer will be generating sales records that look like this:
 
 <center><img src="/assets/images/akka/consumer1.png"/></center>
 
-And we want to do different aggregations to convert the incoming data into features that can be consumed by any machine learning library:
+And we want to generate different aggregations to convert the incoming data into features that can be consumed by any machine learning library:
 
 <center><img src="/assets/images/akka/producer1.png"/></center>
-So this data seems to be something we could use to feed a ML algorithm. In the previous example, the first column specifies the split id. 
+So this data seems to be something we could use to feed a ML algorithm. 
 
 In the following diagram we could have a nice overview about what we are going to implement:
 
@@ -33,16 +34,16 @@ Let's implement it.
 
 ## Implementation
 
-We have to model exactly this Graph using the Akka Streams GraphDSL:
+We have to model exactly this Graph using the **Akka Streams GraphDSL**:
 
 <center><img src="/assets/images/akka/akka_streams_graphdsl.png"/></center>
 
-	Apparently it could seem to be so complex, but the Akka Streams Graph DSL simplify our work. As you can see the code start with one **Broadcast** operator and ended up in a **Merge** operator. Our graph will be a **FlowShape**, that means receiving one input streamand return one output stream. 
+	Apparently it could seem to be so complex, but the Akka Streams Graph DSL simplifies our work. As you can see the code start with one **Broadcast** operator and ended up in a **Merge** operator. Our graph will be a **FlowShape**, that means receiving one input stream and returning one output stream. 
 
-Before we enter into the GraphDSL implementation we need to define how to create a configuration that specifies:
-* How to split the data
-* How to create features
-* Window Frequency
+Before we enter into the GraphDSL implementation let's summarize the implementation requirements:
+* Define how to split the data
+* Define how to create features
+* Define the window frequency
 
 This is the Config class:
 ```
@@ -50,7 +51,7 @@ This is the Config class:
   case class FeatureFunc(name: String, func: Seq[SalesRecord] => Double)
 ```
 
-As we can see it contains a higher order function that converts a salesRecord to a String. the **featuresFunc** contains a sequence of feature functions. 
+As we can see, it contains a higher order function that converts a salesRecord to a String value. The **featuresFunc** contains a sequence of feature functions. 
 
 Here they are the config instances used in our example:
 ```
@@ -157,18 +158,18 @@ The next fragment of code shows the sinks definition and the features conversion
       val printSink = Sink.foreach[String](r => logger.info(s"Producer Record: $r"))
 ```
 Considerations about previous code:
-* Line 1: using the flow fold operator to aggregate all the sales record that belong to the same split during the same window.
+* Line 1: using the flow **fold** operator to aggregate all the sales record that belong to the same split during the same window.
 * Line 10: this line writes into the new feature ids into a file. The splits are formed by a concatenation of strings, but in our output dataset we need to convert the split attributes into one integer. This file will have the relationship between splits and ids.
 * Line 11: we have as an input a map with String as key and a List[SalesRecord] as a value. In the definition of the Config we specified how it would be computed the features conversion using higher order functions.
-* Line 12: here it is the cmputation of the features.
+* Line 12: here it is the computation of the features.
 * Line 13: the output it is something like id, feature1,feature2,feature3...,feature_n
-* Line 19: This is the definition of the console sink. Easy!
+* Line 19: This is the definition of the **console sink**. Easy!
 
 ## Source Code
-I have not included all the source code here, but it is accesible from my github account:
+I have not included all the source code during my explanations, but it is accesible from my github account:
 [streams_repository](https://github.com/dvirgiln/streams-kafka)
 
-Follow the instructions to execute it using Docker:
+In case you want to run all the complete example, just follow the following instructions:
 
 ```
 sbt docker
@@ -183,8 +184,15 @@ docker stack rm streams
 docker swarm leave --force
 ```
 
+This will create:
+* Kafka cluster
+* Spark cluster
+* Akka producer
+* Akka consumer/producer using Graph DSL
+* Spark consumer
+
 ## Conclusion
-Akka Streams is a very powerful tool to manipulate streams. It has some caveats, like it cannot execute into a cluster, but it could be a good solution in many cases. 
+Akka Streams is a very powerful tool to manipulate streams. It has some caveats, like for instance, it cannot execute into a cluster, but it could be a good solution in many cases. 
 
 I hope this example has not been tedious and you have fun. Any doubt you have about the code, do not hesitate to contact me. 
 
