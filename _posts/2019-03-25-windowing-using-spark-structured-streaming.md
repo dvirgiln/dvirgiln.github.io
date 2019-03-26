@@ -1,8 +1,6 @@
 ---
 title: Windowing Kafka Streams using Spark Structured Streaming
-description: We will show what Spark Structured Streaming offers compared to its predecessor: Spark
-  Streaming. We'll cover how to read JSON content from a Kafka Stream and how to aggregate data using
-  spark windowing and watermarking.
+description: We will show what Spark Structured Streaming offers compared to its predecessor Spark Streaming. We will cover how to read JSON content from a Kafka Stream and how to aggregate data using spark windowing and watermarking.
 featured: images/spark_streaming.png
 layout: post
 ---
