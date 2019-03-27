@@ -1,6 +1,6 @@
 ---
-title: Spark Structured Streaming output modes.
-description: We will explain the Spark Structured Streaming output modes and watermark
+title: Spark Structured Streaming output mode.
+description: We will explain the Spark Structured Streaming output mode and watermark features
   with a practical exercise based on Docker.
 featured: images/spark_streaming.png
 layout: post
