@@ -10,18 +10,18 @@ This article is a follow up of our previous [post](https://dvirgiln.github.io/wi
 
 Following our previous example, in this article we want to explain one of the key features of Spark Structured Streaming: the output modes. 
 
-As well we want to explain how Spark manages late records using watermark.
+We also want to explain how Spark manages late records using watermark.
 
 ## Output Modes
-The output mode is a new concept introduced by Structured Streaming. As we already mentioned in our previous [post](https://dvirgiln.github.io/windowing-using-spark-structured-streaming/), Spark Structured Streaming requires to have a sink. 
+The output mode is a new concept introduced by Structured Streaming. As we already mentioned in our previous [post](https://dvirgiln.github.io/windowing-using-spark-structured-streaming/), Spark Structured Streaming requires a sink. 
 
-The output mode specify the way the data is written to the result table. These are the three different values:
+The output mode specifies the way the data is written to the result table. These are the three different values:
 
  * **Append** mode: this is the default mode. Just the new rows are written to the sink. 
  * **Complete** mode: it writes all the rows. It is supported just by groupBy or groupByKey aggregations.
- * **Update** mode: writes in the sink "only" all the rows that are updated.  When there are no aggregations it works exactly the same as "append " mode
+ * **Update** mode: writes in the sink "only" all the rows that are updated.  When there are no aggregations it works exactly the same as "append" mode
 
-We are going to see these 3 different append modes in a real problem.
+Now we are going to see these 3 different append modes in a real problem.
 
 Following our previous post, we were able to aggregate our Sales data in a dataframe that looked like this:
 ```
@@ -34,10 +34,10 @@ Following our previous post, we were able to aggregate our Sales data in a dataf
 | |[2019-03-26 09:01:00, 2019-03-26 09:02:00]|1     |1645.8400000000001|45      |
 ```
 
-Let's explore how the data is written to the sink depending the different output mode chosen:
+Let's explore how the data is written to the sink depending the different output modes chosen:
 
 ### Complete Output Mode
-This is the console output generated when the output mode is set to complete:
+This is the console output generated when the output mode is set to **complete**:
 ```
 | -------------------------------------------
 | Batch: 19
@@ -75,10 +75,10 @@ This is the console output generated when the output mode is set to complete:
 | |[2019-03-26 09:01:00, 2019-03-26 09:02:00]|1     |1645.8400000000001|45      |
 ```
 
-As you can noticed by the different batches, all the windows are being written to the sink, even though some of the windows have not been updated during the that batch. This is the key feature of complete mode. With every record update, it writes everything, not just the updated rows.
+As you will notice by the different batches, all of the windows are being written to the sink, even though some of the windows have not been updated during that batch. This is the key feature of **complete** mode. With every record update, everything has been written again, not just the updated rows.
 
 ### Update Output Mode
-This is the console output generated when the output mode is set to update:
+This is the console output generated when the output mode is set to **update**:
 ```
 | -------------------------------------------
 | Batch: 3
@@ -99,19 +99,19 @@ This is the console output generated when the output mode is set to update:
 | +------------------------------------------+------+--------------+--------+
 |
 ```
-In this case, every batch writes just the rows that have been updated. This output mode normally is what makes more sense in the majority of the cases.
+In this case, every batch writes just the rows that have been updated. This output mode is normally what makes more sense in most cases.
 
 ## Watermark
-Watermark is the streaming property that allows the stream to wait for late records. The records that are coming after the watermark has expired are discarded.
+Watermark is the streaming property that allows the stream to wait for late records. The records that have been streamed after the watermark has expired are discarded.
 
-Watermark makes sense when it is defined a stream window. So windows keep opened waiting for late records until the watermark has expired for those windows.
+Watermark makes sense when it is defined on a stream grouped by windows. So windows stay open waiting for late records, until the watermark has expired for those windows.
 
-To test how watermark function, we will use **update output mode**.
+To test how watermark works, we'll use **update** output mode.
 
-We want to reproduce what normally happens in production ETLs: there is a streaming of data that is aggregated in a window period, but there are some late records that come with a delay. So the real time streaming job follow these steps:
-* Aggregate the data that comes inside of every window.
+We want to reproduce what normally happens in production ETLs: there is a stream of data that is aggregated in a window period, but there are some late records that come with a delay. So the real time streaming job will follow these steps:
+* Aggregate the data that is streamed to every window.
 * Push the aggregated data into the sink.
-* If a new late record comes before the watermark expires, the new record has to be aggregated and push back to the sink.
+* If a new late record comes before the watermark expires, it has to be aggregated and written to the sink.
 
 
 We are going to test this use case in our example:
@@ -123,7 +123,7 @@ We are going to test this use case in our example:
       .withWatermark("transactionTimestamp", "5 minutes")                            
       .groupBy(window($"transactionTimestamp", "1 minute", "1 minute"), $"shopId")   
 ```
-As we can see,  there are windows of one minute and a watermark of 5 minutes. So we are grouping all the data that is coming every minute and wait 5 minutes for late records.
+As we can see, there are windows with a time of one minute and a watermark of 5 minutes. So we are grouping all the data that is coming every minute and wait 5 minutes for late records.
 
 2. The producer sends 2 records every minute.
 ```
@@ -223,9 +223,9 @@ As we can see after 6 minutes it is sent a late record.
 | +------------------------------------------+------+--------------+--------+
 |
 ```
-As we can see the window "*2019-03-26 08:51:00, 2019-03-26 08:52:00*" was written to the sink in the batch number 2. And in the batch number 8, as there was a late record, the same window was updated in the sink, updating the cound and total cost values.
+As we can see the window "*2019-03-26 08:51:00, 2019-03-26 08:52:00*" was written to the sink in batch number 2 and in batch number 8, as it was a late record. In this case, the same window was updated in the sink, updating the count and total cost values.
 
-So this example reproduces exactly our real production use case. There are some records that are aggregated and written to the sink and when it arrives a late record, it updates the sink row, aggregating the new value.
+So this example demonstrates our production use case. There are some records that are aggregated and written to the sink, when it arrives a late record, it updates the sink row, aggregating the new value.
 
 ## Source code
 All the source code can be found on my github account:
@@ -245,5 +245,5 @@ The whole problem has been dockerized. You just need to follow these instruction
     8. docker swarm leave --force
 ```
 ## Conclusion
-This article explains in a easy way with a working example how to use the watermark and output mode features in Spark Structured Streaming. 
-This is a continuation of the [previous article](https://dvirgiln.github.io/windowing-using-spark-structured-streaming/) that hopefully will help you understanding better how Spark Structured Streaming works and how it can solve real production use cases.
+This article explains and demonstrates how to use the watermark and output mode features in Spark Structured Streaming. 
+This is a continuation of the [previous article](https://dvirgiln.github.io/windowing-using-spark-structured-streaming/) that hopefully will help better your understanding of how Spark Structured Streaming works and how it can solve real production use cases.
