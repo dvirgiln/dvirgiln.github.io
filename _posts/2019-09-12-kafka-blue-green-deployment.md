@@ -1,26 +1,26 @@
 ---
-title: Kafka Blue Green Deployment
+title: Kafka BlueGreen Deployment
 featured: images/vpc_kafka/kafka_logo.png
 description: In this post it will be explained how to deploy a new version of a kafka
-  cluster in a production environment using a blue-green deployment technique. This
+  cluster in a production environment using a BlueGreen deployment technique. This
   solution will allow producers to migrate seamlessly their traffic to the new cluster
   without any data loss.
 layout: post
 ---
 
-One of the most challenging and tedious tasks that as a developer I faced it, it is about how to include software and hardware updates in a production Kafka cluster. During my work in the EPS (Expedia Partner Solutions) data lake I have come with different approaches to solve this problem.
+One of the most challenging and tedious tasks that as a developer I faced it, has been about software/hardware upgrades in a production Kafka cluster. During my work for the EPS(Expedia Partner Solutions) data lake I have used different approaches to solve this problem.
 
-The first approach I took was to make partial updates of the cluster and doing reassignment of partitions. The approach initially taken would involve batches updates:
-1. Move all the traffic from the first batch of nodes to the other nodes. For doing this you have to use the Kafka command to reassign partitions.
-2. Update the first batch while the rest of the nodes keeps intact.
+The first approach I took was to make partial updates of the cluster and doing reassignment of partitions. This approach involves batch updates of the production cluster:
+1. Move all the traffic from the one batch of nodes to the other nodes(the intact ones). For doing this you have to use the Kafka command to reassign partitions.
+2. Update the batch while the rest of the nodes keeps intact.
 3. Do the same with the rest of the batches, reassigning partitions and installing the new software/hardware.
 
-As you see this process is quite tedious and dangerous. It would involve that the kafka cluster will have more load and it would involve several topic rebalances.
+As you see this process is quite tedious and dangerous. It would involve that the kafka cluster will have more load and it would involve several topic rebalances. Just imagine that you have a production Kafka cluster of 100 brokers. Maybe you have to use update batches of 10 nodes for not affecting the incoming Kafka traffic. This process would involve 10 reassignment of partitions and 10 batch updates.
 
 All the information about how to make a kafka deployment using a batches update can be found [here](https://dvirgiln.github.io/scale-up-and-update-a-kafka-cluster/).
 
 ## BlueGreen Kafka Deployment
-The BlueGreen deployment technique involves creating a group of new instances and whenever the new instances are ready the traffic is being switched.
+The BlueGreen deployment technique consists on creating a group of new instances and whenever the new instances are ready the traffic is being switched.
 
 The following diagram shows the architecture to implement.
 
@@ -28,27 +28,29 @@ The following diagram shows the architecture to implement.
 
 The main idea behind it is to have two Kafka Clusters running in parallel and switch the traffic from the Route53 DNS record to point to the new cluster.
 
-The old cluster is not removed immediately. It is required to wait until all the traffic from the producers has been switched and all the consumers have processed all the topics. We will go more in detail explaining how to implement and check all of the different parts.
+The old cluster is not removed immediately. It is required to wait until all the traffic from the producers has been switched and all the consumers have processed all the topics. This means that for all the topics in the old Kafka cluster there is zero lag.
 
-## Why not use AWS CodeDeploy
+We will go more in detail explaining how to implement and check all of the different parts.
 
-AWS CodeDeploy has an option to make BlueGreen deployments. It allows to deploy a new version of your code/application without affecting the clients of it. So, it deploys the code in new instances of your ASG and once all the instances are ready it unsubscribes the old instances from the load balancer.
+## Why not to use AWS CodeDeploy
+
+AWS CodeDeploy has an option to make BlueGreen deployments. It allows to deploy a new version of your code/application without affecting users. So, it deploys the code in new instances and once all the instances are ready it unsubscribes the old instances from the load balancer and subscribe the new instances to the ASG.
 
 <center><img src="/assets/images/bluegreen/codedeploy.png"/></center>
 
 Once the instances are being deregistered from the load balancer, you can choose to terminate them or keep them.
 
-Code deploy works fine when a new version of the application is being deployed. And blue/green deployment really does what it is expected. But in case of hardware changes CodeDeploy BlueGreen deployment is not helping much. The way that AWS would perform it when the Autoscaling launch configuration is updated is just killing the instances and creating new ones.
+Code deploy works fine when a new version of the application is being deployed. The BlueGreen deployment really does what it is expected, but in case of hardware changes CodeDeploy BlueGreen deployment is not helping much.
 
-Code deploy it is a really interesting tool provided by AWS and I will write about it in a future post to explain all the capabilities of it: deployment configuration(all at once, one by one ...), rollbacks... Let's focus now in the matter of this article.
+The way that AWS would perform it when the Autoscaling launch configuration is updated, it is just killing the instances and creating new ones. And obviously this is something that is not acceptable in a stateful service like Kafka.
+
+Code deploy it is a really interesting tool provided by AWS and I will write about it in a future post to explain all the capabilities of it: deployment configuration(all at once, one by one ...), rollbacks...
 
 ## BlueGreen implementation
 
-It is required to deploy a new Kafka Cluster. The way to deploy your new Kafka cluster is a decision that depends on what you want. In our case the decision is to maintain the same codebase, but just change the CF stack name that is passed along all the resources, so then there are not conflicts with the previous CF stack.
+It is required to deploy a new Kafka Cluster in production. In our case the decision taken was to maintain the same codebase. For being able to deploy two different Kafka clusters in production with the same CloudFormation codebase, we modified our CF code to include a function suffix in the name of all of our resources.
 
-In our CF templates we just include a suffix in our CF templates. This suffix is being dynamically attached by our CI/CD tool.
-
-It is possible that the new Kafka cluster uses the same Zookeeper cluster. The only thing that needs to be changed is the property *zookeeper.connect* inside of the server.properties:
+Kafka has a direct dependency with Zookeeper. Zookeeper contains information about the partitions, brokers, partition leaders... Obviously the zookeeper connect url has to be different between the two Kafka clusters. The only thing that needs to be changed is the property *zookeeper.connect* inside of the server.properties:
 
 ```
 zookeeper.connect=${zookeeper_urls}/KafkaA
@@ -60,21 +62,19 @@ The following diagram shows the architecture of a Kafka Cluster.
 
 <center><img src="/assets/images/bluegreen/KafkaArch.jpg"/></center>
 
-As you can see there is a load balancer that balance the traffic across all the Kafka brokers. There is as well a Route53 DNS record that points to the Network Load Balancer. For switching the traffic for one cluster to another it is just simple, it just has to be changed the Route53 DNS endpoint to point to the new Kafka Cluster Load Balancer:
+As you can see there is a load balancer that balances the traffic across all the Kafka brokers. There is as well a Route53 DNS record that points to the Network Load Balancer. For switching the traffic for one cluster to another,  just change the Route53 DNS endpoint to point to the new Kafka Cluster Load Balancer. Check out the following diagram:
 
 <center><img src="/assets/images/bluegreen/TwoKafkaArchAfter.jpg"/></center>
 
-It is important to setup the Route53 TTL property accordingly. The Time To Live property allows clients maintain cached the route53 endpoint IP address for a time. If the TTL property is set to 10 minutes, if there is a DNS endpoint change, it won't be effective at least until the TTL has been expired:
+It is important to setup the Route53 TTL property accordingly. The Time To Live property allows clients maintain cached the route53 endpoint IP address for a time. If the TTL property is set to 10 minutes, in case of a DNS endpoint change, it won't be effective at least until the TTL has been expired:
 
  <center><img src="/assets/images/bluegreen/ttl_aws.png"/></center>
 
 ## Producer Code changes
 
-Normally the Kafka producers do not create a new connection to Kafka every time they send a new record. Normally producers they implement a singleton pattern, defining at the creation of the service a KafkaClient instance. With this kind of producer implementation, even if the DNS endpoint has been switched to the new Kafka cluster, clients are not aware of this change, unless they restart/redeploy their services.
+Normally the Kafka producers do not create a new connection to Kafka every time they send a new record to Kafka. Normally producers they implement a singleton pattern, defining at the creation of the service a KafkaClient instance. With this kind of producer implementation, even if the DNS endpoint has been switched to the new Kafka cluster, clients are not aware of this change, unless they restart/redeploy their services.
 
 It is being required to create an implementation that in a scheduled thread creates a new Kafka client connection.
-
-
 
 
 ```
@@ -135,4 +135,4 @@ Considerations about the previous code:
 
 Doing a Kafka BlueGreen deployment it is not complicated, but it has lot of moving parts. There are two well defined parts: infrastructure and producer library.
 
-And the most important part is not losing data. So it requires creating a new Kafka infrastructure (Kafka cluster and Connectors) and doing full End-to-End tests.
+And the most important part is not losing data. So it requires creating a new Kafka infrastructure(Kafka Cluster and Connectors) and doing full End-to-End tests.
