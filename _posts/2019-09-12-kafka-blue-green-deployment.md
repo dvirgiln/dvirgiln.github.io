@@ -1,26 +1,28 @@
 ---
 title: Kafka BlueGreen Deployment
-featured: images/vpc_kafka/kafka_logo.png
-description: In this post it will be explained how to deploy a new version of a kafka
+featured: images/vpc_Kafka/Kafka_logo.png
+description: In this post it will be explained how to deploy a new version of a Kafka
   cluster in a production environment using a BlueGreen deployment technique. This
   solution will allow producers to migrate seamlessly their traffic to the new cluster
   without any data loss.
 layout: post
 ---
 
-One of the most challenging and tedious tasks that as a developer I faced it, has been about software/hardware upgrades in a production Kafka cluster. During my work for the EPS(Expedia Partner Solutions) data lake I have used different approaches to solve this problem.
+One of the most challenging and tedious tasks that as a developer I faced, has been about software/hardware upgrades in a production Kafka cluster. During my work for the EPS(Expedia Partner Solutions) data lake I used different approaches to solve this problem.
 
-The first approach I took was to make partial updates of the cluster and doing reassignment of partitions. This approach involves batch updates of the production cluster:
-1. Move all the traffic from the one batch of nodes to the other nodes(the intact ones). For doing this you have to use the Kafka command to reassign partitions.
-2. Update the batch while the rest of the nodes keeps intact.
+The first approach I took was to make partial updates of the cluster and then doing reassignment of partitions. This approach involves batch updates of the production cluster:
+1. Move all the traffic from one batch of nodes to the rest of nodes(the intact ones). For doing this you have to use a Kafka command to reassign partitions.
+2. Update the batch while the rest of the nodes keeps intact and all the traffic has been redirected to them.
 3. Do the same with the rest of the batches, reassigning partitions and installing the new software/hardware.
 
-As you see this process is quite tedious and dangerous. It would involve that the kafka cluster will have more load and it would involve several topic rebalances. Just imagine that you have a production Kafka cluster of 100 brokers. Maybe you have to use update batches of 10 nodes for not affecting the incoming Kafka traffic. This process would involve 10 reassignment of partitions and 10 batch updates.
+As you see this process is quite tedious and dangerous. One of the consequences of this approach is that the Kafka cluster would have more load and it would incur into several topic rebalances.
 
-All the information about how to make a kafka deployment using a batches update can be found [here](https://dvirgiln.github.io/scale-up-and-update-a-kafka-cluster/).
+For example, imagine that you have a production Kafka cluster of 100 brokers. Maybe you have to use update batches of 10 nodes for not affecting the incoming Kafka traffic. This process would involve 10 reassignment of partitions and 10 batch updates.
+
+All the information about how to make a Kafka deployment using a batches update can be found [here](https://dvirgiln.github.io/scale-up-and-update-a-Kafka-cluster/).
 
 ## BlueGreen Kafka Deployment
-The BlueGreen deployment technique consists on creating a group of new instances and whenever the new instances are ready the traffic is being switched.
+The BlueGreen deployment technique consists on creating a group of new instances and whenever the new instances are ready switch the traffic over.
 
 The following diagram shows the architecture to implement.
 
@@ -34,7 +36,7 @@ We will go more in detail explaining how to implement and check all of the diffe
 
 ## Why not to use AWS CodeDeploy
 
-AWS CodeDeploy has an option to make BlueGreen deployments. It allows to deploy a new version of your code/application without affecting users. So, it deploys the code in new instances and once all the instances are ready it unsubscribes the old instances from the load balancer and subscribe the new instances to the ASG.
+AWS CodeDeploy has an option to make BlueGreen deployments. It allows to deploy a new version of your code/application without affecting users. So, it deploys the code in new instances and once all the instances are ready it unsubscribes the old instances from the load balancer and subscribes the new instances to the autoscaling group.
 
 <center><img src="/assets/images/bluegreen/codedeploy.png"/></center>
 
@@ -42,9 +44,9 @@ Once the instances are being deregistered from the load balancer, you can choose
 
 Code deploy works fine when a new version of the application is being deployed. The BlueGreen deployment really does what it is expected, but in case of hardware changes CodeDeploy BlueGreen deployment is not helping much.
 
-The way that AWS would perform it when the Autoscaling launch configuration is updated, it is just killing the instances and creating new ones. And obviously this is something that is not acceptable in a stateful service like Kafka.
+The way that AWS CloudFormation works when there is an Autoscaling launch configuration update, it's just killing the instances and creating new ones. And obviously this is something that is not acceptable in a stateful service like Kafka.
 
-Code deploy it is a really interesting tool provided by AWS and I will write about it in a future post to explain all the capabilities of it: deployment configuration(all at once, one by one ...), rollbacks...
+Code deploy is a really interesting tool provided by AWS and I will write about it in a future post to explain all the capabilities of it: deployment configuration(all at once, one by one ...), rollbacks...
 
 ## BlueGreen implementation
 
