@@ -1,6 +1,6 @@
 ---
 featured: images/aws_logo.png
-description: This article is an introduction to the deployment service provided by AWS. After the introduction, we will discuss a real AWS CodeDeploy deployment issue and how to troubleshoot it. 
+description: This article is an introduction to the deployment service provided by AWS. After the introduction, we will discuss a real AWS CodeDeploy deployment issue and how to troubleshoot it.
 layout: post
 title: AWS CodeDeploy troubleshooting
 ---
@@ -18,10 +18,10 @@ Once the application is created, then you can add a **Deployment Group**.
 <center><img src="/assets/images/codedeploy_troubleshoot/application_details.png"/></center>
 
 The Deployment Group consists on different attributes that describe how to deploy your application and where to deploy it:
-1. Define where your application can be download by the AWS CodeDeploy agent.
+1. Define from where your application can be download by the AWS CodeDeploy agent. You need to point to a S3 bucket object.
 2. Define the type of deployment:
-* **In place**: whenever a new revision of your application is created, then it automatically uploads it to the compute
-* **BlueGreen**: when a change in the revision is detected AWS automatically creates a new set of EC2 instances, install the application, deregister the old instances and register the new instances into the ASG.
+* **In place**: whenever a new revision of your application is created, then CodeDeploy automatically uploads it to the compute option selected (EC2, Lambda or ECS).
+* **BlueGreen**: when a change in the revision is detected AWS automatically creates a new set of EC2 instances, install the application on them, deregister the old instances and register the new instances into the ASG.
 3. How to detect the EC2 instances:
 * They could be part of an ASG.
 * You can specify the EC2 Tag to associate with the CodeDeploy Deployment Group.
@@ -53,7 +53,7 @@ DeploymentGroup:
           BundleType: zip
 ```
 
-Next thing that needs to be setup is to install in our EC2 instances a **CodeDeploy agent**. To do that you can include a script in the **EC2 User-Data**:
+Next thing that needs to be setup: installing in our EC2 instances a **CodeDeploy agent**. To do that you can include a script like this in the EC2 **User-Data**:
 
 ```
 UserData:
@@ -69,18 +69,18 @@ UserData:
        systemctl start codedeploy-agent
 ```
 
-This script creates on the EC2 startup a CodeDeploy agent that tries to find a CodeDeploy revision to install.
+This script installs on the EC2 startup a CodeDeploy agent that polls from CodeDeploy trying to find a revision to install.
 
 
 ### CodeDeploy is not being invoked. Why?
 
-Once of the most common problems with CodeDeploy is that the deployment fails, but in the console there is not any logging or trace about what could have happened:
+Once of the most common problems with CodeDeploy is a deployment failure that happens not to have any trace/logging in the AWS CodeDeploy console. It is difficult to know what happened, you just see that all the CodeDeploy steps have been skipped.
 
 <center><img src="/assets/images/codedeploy_troubleshoot/problem.png"/></center>
 
-The problem is because, even a deployment is being performed, CodeDeploy has timeout as there is no communication from the CodeDeploy agent that initially should have been installed in the EC2 instance.
+The problem is because CodeDeploy has timeout as there is no communication from the CodeDeploy agent that initially should have been installed in the EC2 instance.
 
-The problem is in the EC2 instance. We need to SSH into it and check what it is going on.
+The problem is inside of the EC2 instance. We need to SSH into it and check what it is going on.
 
 ### TroubleShooting
 
@@ -96,7 +96,7 @@ Sep 12 15:08:19 ip-10-18-34-8 cloud-init: Failed to execute operation: No such f
 Sep 12 15:08:19 ip-10-18-34-8 cloud-init: + systemctl start codedeploy-agent
 Sep 12 15:08:19 ip-10-18-34-8 cloud-init: Failed to start codedeploy-agent.service: Unit not foun
 ```
-We could see that it it failed to enable the code deploy agent. So the instruction in the line 2 initially has failed.
+In line 2 we could see that it failed to enable the code deploy agent.
 
 The next file to check is the **/tmp/codedeploy-agent.update.log**:
 
@@ -115,7 +115,7 @@ Error: Rpmdb changed underneath us
 E, [2019-09-12T15:08:19.845655 #3284] ERROR -- : Error installing /tmp/codedeploy-agent-1.0-1.1597.noarch.tmp-20190912-3284-xheme.rpm
 ```
 
-So from this log, we can see that it failed installing the codedeploy agent rpm with a cryptic message "**Error: Rpmdb changed underneath us**".
+From this log, we can see that it failed installing the CodeDeploy agent rpm with a cryptic message "**Error: Rpmdb changed underneath us**".
 
 The next thing that we need to check is the yum log:
 
@@ -150,7 +150,7 @@ Sep 12 15:08:44 Installed: CylancePROTECT-2.0.1530-705.x86_64
 
 The last line of this file indicates the last package that was installed.
 
-It appears that the Cylance service has installed 2 additional packages. It makes sense that these 2 packages being installed by a parallel process has created a race, whereby the Cylance service got to lock the RPMDB before the CodeDeploy RPM could, so the CodeDeploy failed.  In order to avoid this race condition going forward, the easiest thing to try is to just add a 'sleep 60s' to the CloudInit script, just before the './install auto', to ensure that it pauses for 60 seconds, giving Cylance a chance to complete first.
+It appears that the Cylance service installed 2 additional packages. It makes sense that these 2 packages being installed by a parallel process has created a race, whereby the Cylance service got to lock the RPMDB before the CodeDeploy RPM could, so the CodeDeploy failed.  In order to avoid this race condition going forward, the easiest thing to try is to just add a 'sleep 60s' to the CloudInit script, just before the './install auto', to ensure that it pauses for 60 seconds, giving Cylance a chance to complete first.
 
 Once the timeout is being added, CodeDeploy works fine. You can check all the output of CodeDeploy in the directory:
 
