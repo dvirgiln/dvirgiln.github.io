@@ -1,8 +1,7 @@
 ---
 title: Migration from EC2  to Fargate
 featured: images/aws_logo.png
-description: This post will be a good introduction to AWS ECS Fargate. We will explain
-  how Fargate works, differences with AWS ECS EC2 and how to migrate from ECS EC2
+description: This post is a good introduction to AWS ECS and more particularity to the Fargate deployment type. We will explain how Fargate works, differences with AWS ECS EC2 and how to migrate from ECS EC2
   services to ECS Fargate.
 layout: post
 ---
