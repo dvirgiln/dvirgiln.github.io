@@ -6,9 +6,10 @@ description: This post is a good introduction to AWS ECS and more particularity 
 layout: post
 ---
 
-ECS stands for *Elastic Container Service* and its function allows to run docker applications in a AWS cluster. The docker applications hav to be deployed in AWS Elastic Container Registry(ECR).
+### Introduction
+ECS stands for *Elastic Container Service* and its function is running docker applications in an AWS cluster. The docker applications have to be deployed in AWS Elastic Container Registry(ECR).
 
-The first thing to do when creating/running a docker application in ECS is to create an ECS cluster.
+The first thing to do when creating/running a docker application in ECS is creating an ECS cluster.
 
 <center><img src="/assets/images/ecs/create_cluster.png"/></center>
 
@@ -19,7 +20,10 @@ There are two cluster flavours:
 
 If you have your services already deployed in EC2 and you want to deploy them in Fargate, for example to avoid having an overprovisioned cluster, or to avoid problems related EBS volume space, there are a few steps to have in consideration.
 
-As you know, when you try your CF template, there is not a way to know if that is correct. You have to include the change and try it. AWS is not providing you a full set of errors in your template. The CF output just shows the first error encountered. That's why this guide is useful if your goal is to migrate from EC2 cluster to Fargate. Steps to follow:
+
+### Migration from EC2 Services to Fargate
+
+As you know, when you try your CF template, there is not a way to know if that is correct. You have to include the change and try it. AWS is not providing you a full set of errors in your template. The CF output just shows the first error encountered. That's why this guide is useful if your goal is to migrate from EC2 cluster to Fargate.
 
 This is how our CloudFormation ECS task definition looks like before migrating to Fargate:
 ```
@@ -80,14 +84,17 @@ This is how our CloudFormation ECS task definition looks like before migrating t
       TaskDefinition: !Ref ContainerTask
       ServiceName: !Ref ServiceName
 ```
-First change to apply is the **Launch Type** in the **ECSService** component. This change is the first and more intuitive:
+
+These are the steps to follow:
+
+1. First change to apply is the **Launch Type** in the **ECSService** component. This change is the first and more intuitive:
 ```
   ECSService:
     Type: AWS::ECS::Service
     Properties:
       LaunchType: FARGATE
 ```
-The first error that we encountered was *Fargate requires task definition to have execution role ARN to support log driver awslogs.*. This error is fixed by adding an execution role as part of the  **AWS::ECS::TaskDefinition** :
+2. The first error that we encountered is *Fargate requires task definition to have execution role ARN to support log driver awslogs.*. This error is fixed by adding an execution role as part of the  **AWS::ECS::TaskDefinition** :
 ```
   ContainerTask:
     Type: AWS::ECS::TaskDefinition
@@ -95,9 +102,9 @@ The first error that we encountered was *Fargate requires task definition to hav
       TaskRoleArn: !Ref RoleArn
       ExecutionRoleArn: !Ref RoleArn
 ```
-Before it was only defined a TaskRoleArn.
+In an EC2 deployment only the TaskRoleArn property is required.
 
-The next error that we found was *When networkMode=awsvpc, the host ports and container ports in port mappings must match.*. To solve this problem you need to include a change in the **AWS::ECS::TaskDefinition**:
+3. The next error that we found is *When networkMode=awsvpc, the host ports and container ports in port mappings must match.*. To solve this problem you need to include a change in the **AWS::ECS::TaskDefinition**:
 ```
           PortMappings:
             -
@@ -105,22 +112,20 @@ The next error that we found was *When networkMode=awsvpc, the host ports and co
               #HostPort: 0
               Protocol: !Ref ContainerProtocol
 ```
-As you see the line 4 has been commented. In Fargate the *host port *and *container port* should have the same value. When it is used EC2, as there are many task of the same service deployed in the same ec2 instance the real target port is taken from the ephemeral ports range. If you do not define the hostPort property Fargate will use the same that was defined for the *ContainerPort*.
+As you see the line 4 has been commented. In Fargate the *host port *and *container port* should have the same value. When it is used EC2, as there are many task of the same service deployed in the same EC2 instance the real target port is taken from the ephemeral ports range. If you do not define the hostPort property Fargate will use the same that was defined for the *ContainerPort*.
 
-The next error is *Fargate only supports network mode ?awsvpc?*.
-
-And this is how it looks after having included all the changes already mentioned:
+4. The next error is *Fargate only supports network mode ?awsvpc?*.
 ```
   ContainerTask:
     Type: AWS::ECS::TaskDefinition
     Properties:
 			NetworkMode: awsvpc
 ```
-The *network mode* property. The default value is **bridge**, and this is suitable for ECS EC2 task definitions, but in case of Fargate Bridge is not supported, and the only option is **awsvpc**. The bridge network mode allows using the Docker bridge to communicate docker containers that are running in the same EC2 instance, while in the AWS VPC network mode, every task has its own ENI, this means, every task has its own ipv4 from the subnet that it has been deployed.
+The default value for the *network mode* property is **bridge**. This setup is suitable for ECS EC2 task definitions, but in case of Fargate, *bridge* network mode is not supported, and the only supported option is **awsvpc**. The bridge network mode allows using the Docker bridge to communicate docker containers that are running in the same EC2 instance, while in the AWS VPC network mode, every task has its own ENI, this means, every task has its own ipv4 from the subnet that it has been deployed.
 
 This is one of the restrictions that we can see between EC2 and Fargate. In Fargate every task has its own IPV4. In case of running a long number of tasks, it could happen that subnets can run out of ips.
 
-After including the last change, the next error found was *Task definition does not support launch_type FARGATE.*. To solve this problem it is just required to add another field in the task definition:
+5. After including the last change, the next error found was *Task definition does not support launch_type FARGATE.*. To solve this problem it is just required to add another field in the task definition:
 ```
   ContainerTask:
     Type: AWS::ECS::TaskDefinition
@@ -130,14 +135,14 @@ After including the last change, the next error found was *Task definition does 
 ```
 By default the ECS tasks are only compatible with EC2 deployments.
 
-We are in the middle of the migration to Fargate. After our last change, the output is *Fargate requires that 'cpu' be defined at the task level.* . So, even though it is defined the CPU as part of the task definition, for Fargate we need to declare it as part of the service:
+6. We are in the middle of the migration to Fargate. After our last change, the output is *Fargate requires that 'cpu' be defined at the task level.* . So, even though it is defined the CPU as part of the task definition, for Fargate we need to declare it as part of the service:
 ```
   ECSService:
     Type: AWS::ECS::Service
     Properties:
 			Cpu: !Ref ECSCpu
 ```
-The next error found was *The provided target group arn:aws:elasticloadbalancing:us-west-2:${ACCOUNT}:targetgroup/kconn-Targe-sssss/ has target type instance, which is incompatible with the awsvpc network mode specified in the task definition.*.
+7. The next error found was *The provided target group arn:aws:elasticloadbalancing:us-west-2:${ACCOUNT}:targetgroup/kconn-Targe-sssss/ has target type instance, which is incompatible with the awsvpc network mode specified in the task definition.*.
 
 We do need to redefine the Target Group when deploying to Fargate:
 ```
@@ -154,7 +159,7 @@ We do need to redefine the Target Group when deploying to Fargate:
 ```
 It is required to define the *Port* and the *TargetType: ip*. When the deployment is done with EC2, the port is set to 1, and this tells ECS that it has to dynamically assign the port(the ephemeral port).
 
-Once this error is fixed, the next error is *Network Configuration must be provided when networkMode 'awsvpc' is specified.*
+8. Once this error is fixed, the next error is *Network Configuration must be provided when networkMode 'awsvpc' is specified.*
 ```
   ECSService:
     Type: AWS::ECS::Service
@@ -179,7 +184,7 @@ It requires to add a *Security Group* with the port defined in the **PortMapping
 
 When the Network Configuration is defined in the *ECS Service* component, then it is required to remove the Role property. Talk here about the ECS SERVICE role  {TO_BE_DONE}
 
-And finally, this is the last error that we found: *Status reason	CannotPullECRContainerError: AccessDeniedException: User: arn:aws:sts::${ACCOUNT}:assumed-role/name/... is not authorized to perform: ecr:GetAuthorizationToken on resource*.
+9. And finally, this is the last error that we found: *Status reason	CannotPullECRContainerError: AccessDeniedException: User: arn:aws:sts::${ACCOUNT}:assumed-role/name/... is not authorized to perform: ecr:GetAuthorizationToken on resource*.
 
 To solve this problem as part of the role associated to the task, you need to add the following policy:
 ```
