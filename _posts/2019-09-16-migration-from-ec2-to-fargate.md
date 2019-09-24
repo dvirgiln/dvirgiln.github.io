@@ -121,9 +121,7 @@ As you see the line 4 has been commented. In Fargate the *host port *and *contai
     Properties:
 			NetworkMode: awsvpc
 ```
-The default value for the *network mode* property is **bridge**. This setup is suitable for ECS EC2 task definitions, but in case of Fargate, *bridge* network mode is not supported, and the only supported option is **awsvpc**. The bridge network mode allows using the Docker bridge to communicate docker containers that are running in the same EC2 instance, while in the AWS VPC network mode, every task has its own ENI, this means, every task has its own ipv4 from the subnet that it has been deployed.
-
-This is one of the restrictions that we can see between EC2 and Fargate. In Fargate every task has its own IPV4. In case of running a long number of tasks, it could happen that subnets can run out of ips.
+The default value for the *network mode* property is **bridge**. This setup is suitable for ECS EC2 task definitions, but in case of Fargate, *bridge* network mode is not supported, and the only supported option is **awsvpc**. The bridge network mode allows using the Docker bridge to communicate docker containers that are running in the same EC2 instance, while in the AWS VPC network mode, every task has its own ENI, this means, every task has its own ipv4 from the subnet that it has been deployed. This is one of the restrictions that we can see between EC2 and Fargate. In Fargate every task has its own IPV4. In case of running a long number of tasks, it could happen that subnets can run out of ips.
 
 5. After including the last change, the next error found was *Task definition does not support launch_type FARGATE.*. To solve this problem it is just required to add another field in the task definition:
 ```
@@ -180,9 +178,7 @@ It is required to define the *Port* and the *TargetType: ip*. When the deploymen
           ToPort: 7400       
 ```
 
-It requires to add a *Security Group* with the port defined in the **PortMappings** property to allow access to the service, in our case from within the VPC.
-
-When the Network Configuration is defined in the *ECS Service* component, then it is required to remove the Role property. Talk here about the ECS SERVICE role  {TO_BE_DONE}
+It requires to add a *Security Group* with the port defined in the **PortMappings** property to allow access to the service, in our case from within the VPC. When the Network Configuration is defined in the *ECS Service* component, then it is required to remove the Role property. Talk here about the ECS SERVICE role  {TO_BE_DONE}
 
 9. And finally, this is the last error that we found: *Status reason	CannotPullECRContainerError: AccessDeniedException: User: arn:aws:sts::${ACCOUNT}:assumed-role/name/... is not authorized to perform: ecr:GetAuthorizationToken on resource*.
 
@@ -271,6 +267,6 @@ And that's all... This is how our CloudFormation template looks like after all t
 ```
 ### Conclusions
 
-As you notice, changing from EC2 to Fargate is not trivial. The documentation is not clear about it. In my opinion it would be easier if, instead of having one CloudFormation component that works for both Fargate and EC2 clusters, it could have been decoupled into *ECS::FargateService* and *ECS::EC2Service* and the same would apply for the tasks. With this solution we would avoid having if else conditions in the documentation for almost all the attributes.
+As you notice,  changing from EC2 to Fargate is not trivial. The documentation is not clear about it. In my opinion it would be easier if, instead of having one CloudFormation component that works for both Fargate and EC2 clusters, it could have been decoupled into *ECS::FargateService* and *ECS::EC2Service* and the same would apply for the tasks. With this solution we would avoid having if else conditions in the documentation for almost all the attributes.
 
 In case you have to migrate your services to Fargate, I hope this guide will help you.
